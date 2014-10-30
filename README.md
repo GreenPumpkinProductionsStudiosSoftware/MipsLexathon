@@ -9,3 +9,4 @@ i've got the master plan.
 
 Program dictionary is contained in lexdict.txt.
 another readme edit
+more tests
