@@ -7,6 +7,7 @@ it's who i am.
 i am the eggman.
 i've got the master plan.
 this is another test.
+i'm still testing.
 
 Program dictionary is contained in lexdict.txt.
 another readme edit
