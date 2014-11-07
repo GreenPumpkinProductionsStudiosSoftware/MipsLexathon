@@ -1,6 +1,7 @@
 #7 November 2014. ~StarFruitMystic~
-#Searches a file named "dictionary.txt" for a word input by the user. It does this by reading the file by byte, which is probably the most straightforward way to do it but is not very effective.
-#We're probably just going to load the entire dictionary of words into the program. That would be the fastest way to do it, and even that would take a long time. 4M of memory is more than enough to store all the #owrds we need, I think.
+#Searches a file named "lexdict.txt" for a word input by the user. It does this by reading the file by byte, which is probably the most straightforward way to do it but is not very effective.
+#We're probably just going to load the entire dictionary of words into the program. That would be the fastest way to do it, and even that would take a long time. 4M of memory is more than enough to store all the 
+#words we need, I think.
 #There's not much we can do in terms of fancy search algorithms because as far as i can tell bytes in a file can only be read in sequence. So no jumping around and starting the read in the middle of the file.
 #
 #Type in a word that's not in the dictionary and see how long it takes.
