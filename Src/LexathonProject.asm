@@ -74,7 +74,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		beq $t1, $a1, endjumble #we flop each character in the thing once.
 		li $v0, 42
 		li $a0, 1
-		sayscall
+		syscall
 		
 		addu $t2, $a0, $t0 #flips each character in the string with another random character in the string.
 		lb $t3, ($t2)
