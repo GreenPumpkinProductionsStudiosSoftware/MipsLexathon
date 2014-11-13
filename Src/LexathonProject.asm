@@ -31,7 +31,13 @@ generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
 	li $a1, 9200
 	syscall	
 	
+	li $t1, 80
+	mul $a0, $a0, $t1
+	addi $a0, $a0, 0x10040000
+	
+	
 	jal jumble  
+	jal shuffle
 	jr $ra #i think that should be all you really need to do.
 
 
