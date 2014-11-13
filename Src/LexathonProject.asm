@@ -1,11 +1,12 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+.text
 main:
 
 generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
 	li $v0, 13	
-	la $a0, lexdict9.txt
+	la $a0, lexdict9
 	li $a1, 0
 	li $a2, 0
 	syscall
@@ -42,7 +43,7 @@ checkarray:
 strcpr:#takes arguments a0=the address of the first string, a1=the address of the second string. returns v0=1 if strings match, v0=0 if they do not.
 	lb $t0, ($a0)
 	lb $t1, ($a1)
-	bneq $t1, $t0, strcprfalse
+	bne $t1, $t0, strcprfalse
 	beq $t1, $0, strcprtrue #if t1 is equal to 0 and we know t1 and t0 are equal, then we can conclude that we have reached the end of the strings and that the strings are equal. note that in order for this function to work, both strings must be null-terminated.
 	addiu $a0, $a0, 1
 	addiu $a1, $a1, 1
@@ -57,7 +58,7 @@ strcpr:#takes arguments a0=the address of the first string, a1=the address of th
 	
 readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=address of input buffer.  returns v0, the file status
 	addiu $a2, $0, 16 #read EVERY character
-	readlineloop:	
+	readlineloop:
 		li $v0, 14
 		syscall
 		
@@ -85,7 +86,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 	j jumbleloop
 	endjumble:
 		jr $ra
-checkuserinput
+checkuserinput:
 
 ui:
 
