@@ -67,21 +67,26 @@ readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=a
 	readlineend:	
 		jr $ra	
 jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length of string.
-	move $t0, $a0
-	move $t1, $a0
-	addu $t5, $a0, $a1
+	move $t0, $a0 #address now contained in t0. this will be used for reference.
+	move $t1, $a0 #address now also contained in t1. 
+	sll $a1, 1 #shift one left aka multiply by two, because characters take up two bytes. 
+	addu $t5, $a0, $a1 #t5 now contains the final address in the string
 	jumbleloop:	
-		beq $t1, $a1, endjumble #we flop each character in the thing once.
-		li $v0, 42
-		li $a0, 1
-		syscall
+		beq $t1, $t5, endjumble #we flop each character in the thing once.
+		li $v0, 42 
+		li $a0, $a1
+		syscall #generate a random number between 
 		
-		addu $t2, $a0, $t0 #flips each character in the string with another random character in the string.
-		lb $t3, ($t2)
+		addu $t2, $a0, $t0 #the character in address $t1 will be flipped with the character in the address $t2
+		lb $t3, ($t2)#flips each character in the string with another random character in the string.
 		lb $t4, ($t1)
-		sb $t3  ($t1)
-		sb $t4  ($t2)
-		addiu $t1, $t1, 1
+		sb $t3, ($t1)
+		sb $t4, ($t2)
+		lb $t3, 1($t2)
+		lb $t4, 1($t1)
+		sb $t3, 1($t1)
+		sb $t4, 1($t2)
+		addiu $t1, $t1, 2
 	j jumbleloop
 	endjumble:
 		jr $ra
