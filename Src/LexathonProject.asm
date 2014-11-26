@@ -1,8 +1,14 @@
+# lexdict loaded at 0x10040000
+
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 .text
 main:
+	jal generatearray	# generates array and jumbles letters
+	jal drawgui
+	li $v0, 10	# ends program
+	syscall
 
 generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
 	li $v0, 13	
@@ -38,12 +44,8 @@ generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
 	li $a1, 9
 	
 	jal jumble  
-	jal shuffle
+	#jal shuffle
 	jr $ra #i think that should be all you really need to do.
-
-
-
-
 
 checkarray:
 	
@@ -61,8 +63,7 @@ strcpr:#takes arguments a0=the address of the first string, a1=the address of th
 	strcprtrue:
 		addiu $v0, $0, 1
 		jr $ra
-			
-	
+				
 readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=address of input buffer.  returns v0, the file status
 	addiu $a2, $0, 16 #read EVERY character
 	readlineloop:
@@ -95,7 +96,11 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		jr $ra
 checkuserinput:
 
-ui:
+drawgui: #prints grid display
+	move $t0, $a0	#moves address of word to be displayed to $t0
+	lb $a0, 1($t0)
+	li $v0, 4
+	syscall		#print first letter
 
 shuffle:
 
