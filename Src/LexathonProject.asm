@@ -1,19 +1,30 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+
 .text
 main:
 
-generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
+
+generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
+	#stack push
+	addi $sp, $sp, -16
+	sw $ra, 0($sp)
+	sw $t0, 4($sp)
+	sw $t1, 8($sp)
+	sw $a1, 12($sp)
+
+	move $t0, $a0
+	
 	li $v0, 13	
 	la $a0, lexdict9
 	li $a1, 0
 	li $a2, 0
 	syscall
 	
-	#load the entire file into 0x10040000	
+	#load the entire file into the provided address 
 	move $a0, $v0
-	li $a1, 0x10040000
+	move $a1, $t0
 	jal readfile
 
 	#get the system  time so i can use it as a seed
@@ -27,27 +38,38 @@ generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
 	syscall
 		
 	#generate random number	
-	#li $v0, 42
-	#li $a1, 9200
-	#syscall	
+	li $v0, 42
+	li $a1, 9199
+	syscall	
 	
-	#li $t1, 20
-	#mul $a0, $a0, $t1
-	#addi $a0, $a0, 0x10040000
-	li $a0, 0x10040000
+	#jumble the word at the appropriate address.	
+	li $t1, 10 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
+	multu $a0, $t1
+	mflo $a0
+	addu $a0, $a0, $t0
 	li $a1, 9
-	
 	jal jumble  
-	jal shuffle
-	jr $ra #i think that should be all you really need to do.
-
-
-
-
+	
+	move $v0, $a0
+	
+	#stack pop
+	lw $ra, 0($sp)
+	lw $t0, 4($sp)
+	lw $t1, 8($sp)
+	lw $a1, 12($sp)
+	addiu $sp, $sp, 16
+	jr $ra
 
 checkarray:
 	
 strcpr:#takes arguments a0=the address of the first string, a1=the address of the second string. returns v0=1 if strings match, v0=0 if they do not.
+	#stack push
+	addiu $sp, $sp, -16
+	sw $t0, 0($sp)
+	sw $t1, 4($sp)
+	sw $a0, 8($sp)
+	sw $a1, 12($sp)
+
 	lb $t0, ($a0)
 	lb $t1, ($a1)
 	bne $t1, $t0, strcprfalse
@@ -57,13 +79,27 @@ strcpr:#takes arguments a0=the address of the first string, a1=the address of th
 	j strcpr
 	strcprfalse:
 		addu $v0, $0, $0
-		jr $ra
+		j strcprexit	
 	strcprtrue:
 		addiu $v0, $0, 1
+		j strcprexit
+	strcprexit:
+		#stack pop
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $a0, 8($sp)
+		lw $a1, 12($sp)
+		addiu $sp, $sp, 16
 		jr $ra
 			
 	
 readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=address of input buffer.  returns v0, the file status
+	#stack push	
+	addiu $sp, $sp, -12
+	sw $a2, 0($sp)
+	sw $a0, 4($sp)
+	sw $a1, 8($sp)
+	
 	addiu $a2, $0, 16 #read EVERY character
 	readlineloop:
 		li $v0, 14
@@ -72,29 +108,55 @@ readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=a
 		beq $v0, $0 readlineend #a status of zero means that the read has hit end of file	
 		addiu $a1, $a1, 16 #store the next character in the next byte.	
 	j readlineloop
-	readlineend:	
+	readlineend:
+		#stack pop
+		lw $a2, 0($sp)
+		lw $a0, 4($sp)
+		lw $a1, 8($sp)
+		addiu $sp, $sp, 12
 		jr $ra	
+
 jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length of string.
-	move $t0, $a0 #address now contained in t0. this will be used for reference.
-	move $t1, $a0 #address now also contained in t1. 
-	addu $t5, $a0, $a1 #t5 now contains the final address in the string
+	#stack push
+	addiu $sp, $sp, -24
+	sw $t0, 0($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)	
+	sw $a0, 12($sp)
+	sw $a1, 16($sp)
+	sw $v0, 20($sp)
+
+	#move $t0, $a0 #address now contained in t0. this will be used for reference.
+	move $t1, $a0 #address now also contained in t1.
+	addu $t0, $a0, $a1 #t0 now contains the final address in the string
+	addiu $a1, $a1, -1#alignment for starting the string with the 1st character instead of the 0th
 	jumbleloop:	
-		beq $t1, $t5, endjumble #we flop each character in the thing once.
+		beq $t1, $t0, endjumble #we flop each character in the thing once.
 		li $v0, 42 
 
 		move $a0, $a1
 
-		syscall #generate a random number between 
+		syscall #generate a random number between 0 and the length of the string starting at 1
 		
-		addu $t2, $a0, $t0 #the character in address $t1 will be flipped with the character in the address $t2
-		lb $t3, ($t2)#flips each character in the string with another random character in the string.
-		lb $t4, ($t1)
-		sb $t3, ($t1)
-		sb $t4, ($t2)	
+		addiu $a0, $a0, 1#alignment for starting the string with the 1st character instead of the 0th
+		subu $t2, $t0, $a0 #the character in address $t1 will be flipped with the character in the address $t2
+		lb $a0, ($t2)#flips each character in the string with another random character in the string.
+		lb $v0, ($t1)
+		sb $a0, ($t1)
+		sb $v0, ($t2)	
 		addiu $t1, $t1, 1
 	j jumbleloop
 	endjumble:
+		#stack pop
+		lw $t0, 0($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)	
+		lw $a0, 12($sp)
+		lw $a1, 16($sp)
+		lw $v0, 20($sp)	
+		addiu $sp, $sp, 24
 		jr $ra
+
 checkuserinput:
 
 ui:
