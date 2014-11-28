@@ -1,12 +1,14 @@
 # lexdict loaded at 0x10040000
 
 .data
+#welcome: .asciiz "Welcome to LEXATHON!\n\n"
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 .text
 main:
 	jal generatearray	# generates array and jumbles letters
 	jal drawgui
+	jal shuffle
 	li $v0, 10	# ends program
 	syscall
 
@@ -133,7 +135,16 @@ drawgui: #prints grid display
 	syscall
 	lb $a0, 8($t0) # prints ninth character
 	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
 	jr $ra
 shuffle:
+	la $a0, ($t0)
+	addi $a1, $0, 0x00000009
+	jal jumble
+	jal drawgui
+	jr $ra # code infinitely loops at this point
 
 
