@@ -1,0 +1,22 @@
+~~How to KDE:~~
+the KDE appears to uses four memory addresses to do it's job: 0xffff0000, 0xffff0004,
+0xfff0008, and xffff000c.
+
+0xffff0000 and 0xffff0004 are used for the keyboard emulator. 0xffff0004 contains the code of the
+key pressed. 0xffff0000 contains the ready bit (the lowest place, ...0001) and the interrupt-enable
+bit (the second to lowest place, ...0010). The interrupt-enable bit is zero by default, and you
+have to set it to one using a store operation.
+The ready bit is set to one every time a key is pressed and set to zero every time an instruction
+like lw or lb reads the content of 0xffff0004.
+If the ready bit is one, the interrupt-enable bit is one, and the first bit of coprocessor0
+regsiter
+$12 is one, then MARS initiates an interrupt, where it will look for kernel mode instructions at
+0x80000180 (why there? because that is the way MARS was written). it will then run whatever
+instructions are there, which have presumably been written to
+deal with an interrupt.
+
+0xffff000c and 0xffff0008 are used for the display emulator. Their functions mirror the two keyboard
+emulator addresses. 0xffff0008 contains the display's ready bit, which is set set to zero when data
+is stored in 0xffff000c using an operation such as sw or sb. It is then set back to one after the
+character in 0xffff000c is put on the display, which occurs after a delay that the user can set in
+the KDE's dialog.
