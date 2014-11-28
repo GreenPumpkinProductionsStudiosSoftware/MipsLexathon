@@ -3,6 +3,7 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+newline: .asciiz "\n"
 .text
 main:
 	jal generatearray	# generates array and jumbles letters
@@ -45,6 +46,7 @@ generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
 	
 	jal jumble  
 	#jal shuffle
+	addi $ra, $0, 0x00400004 # program was infinitely looping for some reason, hard codes return address to main
 	jr $ra #i think that should be all you really need to do.
 
 checkarray:
@@ -86,23 +88,41 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		syscall #generate a random number between 
 		
 		addu $t2, $a0, $t0 #the character in address $t1 will be flipped with the character in the address $t2
-		lb $t3, ($t2)#flips each character in the string with another random character in the string.
+		lb $t3, ($t2) #flips each character in the string with another random character in the string.
 		lb $t4, ($t1)
 		sb $t3, ($t1)
 		sb $t4, ($t2)	
 		addiu $t1, $t1, 1
 	j jumbleloop
 	endjumble:
-		addi $ra, $0, 0x00400004
 		jr $ra
 checkuserinput:
 
 drawgui: #prints grid display
-	move $t0, $a0	#moves address of word to be displayed to $t0
-	lb $a0, 1($t0)
-	li $v0, 4
-	syscall		#print first letter
-
+	li $v0, 11
+	lb  $a0, 1($t0) #prints first character
+	syscall
+	lb $a0, 2($t0) #prints second character
+	syscall
+	lb $a0, 3($t0) #prints third character
+	syscall
+	#li $v0, 4
+	#lw $a0, newline #moves to new line
+	#syscall
+	#li $v0, 11
+	lb $a0, 4($t0) # prints fourth character
+	syscall
+	lb $a0, 0($t0) # prints middle character
+	syscall
+	lb $a0, 5($t0) # prints sixth character
+	syscall
+	lb $a0, 6($t0) # prints seventh character
+	syscall
+	lb $a0, 7($t0) # prints eighth character
+	syscall
+	lb $a0, 8($t0) # prints ninth character
+	syscall
+	jr $ra
 shuffle:
 
 
