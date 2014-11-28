@@ -1,11 +1,12 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+.text
 main:
 
 generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
 	li $v0, 13	
-	la $a0, lexdict9.txt
+	la $a0, lexdict9
 	li $a1, 0
 	li $a2, 0
 	syscall
@@ -26,11 +27,18 @@ generatearray:#DOESN'T TAKE YOUR ARGUMENTS.
 	syscall
 		
 	#generate random number	
-	li $v0, 42
-	li $a1, 9200
-	syscall	
+	#li $v0, 42
+	#li $a1, 9200
+	#syscall	
+	
+	#li $t1, 20
+	#mul $a0, $a0, $t1
+	#addi $a0, $a0, 0x10040000
+	li $a0, 0x10040000
+	li $a1, 9
 	
 	jal jumble  
+	jal shuffle
 	jr $ra #i think that should be all you really need to do.
 
 
@@ -42,7 +50,7 @@ checkarray:
 strcpr:#takes arguments a0=the address of the first string, a1=the address of the second string. returns v0=1 if strings match, v0=0 if they do not.
 	lb $t0, ($a0)
 	lb $t1, ($a1)
-	bneq $t1, $t0, strcprfalse
+	bne $t1, $t0, strcprfalse
 	beq $t1, $0, strcprtrue #if t1 is equal to 0 and we know t1 and t0 are equal, then we can conclude that we have reached the end of the strings and that the strings are equal. note that in order for this function to work, both strings must be null-terminated.
 	addiu $a0, $a0, 1
 	addiu $a1, $a1, 1
@@ -57,7 +65,7 @@ strcpr:#takes arguments a0=the address of the first string, a1=the address of th
 	
 readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=address of input buffer.  returns v0, the file status
 	addiu $a2, $0, 16 #read EVERY character
-	readlineloop:	
+	readlineloop:
 		li $v0, 14
 		syscall
 		
@@ -73,7 +81,9 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 	jumbleloop:	
 		beq $t1, $t5, endjumble #we flop each character in the thing once.
 		li $v0, 42 
-		li $a0, $a1
+
+		move $a0, $a1
+
 		syscall #generate a random number between 
 		
 		addu $t2, $a0, $t0 #the character in address $t1 will be flipped with the character in the address $t2
@@ -85,7 +95,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 	j jumbleloop
 	endjumble:
 		jr $ra
-checkuserinput
+checkuserinput:
 
 ui:
 
