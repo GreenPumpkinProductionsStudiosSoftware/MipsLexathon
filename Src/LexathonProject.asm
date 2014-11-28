@@ -3,7 +3,6 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
-newline: .asciiz "\n"
 .text
 main:
 	jal generatearray	# generates array and jumbles letters
@@ -102,23 +101,35 @@ drawgui: #prints grid display
 	li $v0, 11
 	lb  $a0, 1($t0) #prints first character
 	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
 	lb $a0, 2($t0) #prints second character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
 	syscall
 	lb $a0, 3($t0) #prints third character
 	syscall
-	#li $v0, 4
-	#lw $a0, newline #moves to new line
-	#syscall
-	#li $v0, 11
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
 	lb $a0, 4($t0) # prints fourth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
 	syscall
 	lb $a0, 0($t0) # prints middle character
 	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
 	lb $a0, 5($t0) # prints sixth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
 	syscall
 	lb $a0, 6($t0) # prints seventh character
 	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
 	lb $a0, 7($t0) # prints eighth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
 	syscall
 	lb $a0, 8($t0) # prints ninth character
 	syscall
