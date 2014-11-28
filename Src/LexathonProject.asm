@@ -93,6 +93,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		addiu $t1, $t1, 1
 	j jumbleloop
 	endjumble:
+		addi $ra, $0, 0x00400004
 		jr $ra
 checkuserinput:
 
