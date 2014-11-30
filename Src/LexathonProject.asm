@@ -4,7 +4,12 @@ lexdict:  .asciiz "lexdict.txt"
 
 .text
 main:
-
+	addi $a0, $0, 0x10040000 #loads dictionary into 0x10040000, don't know if we actually want it there
+	jal generatearray
+	jal drawgui
+	jal shuffle
+	li $v0, 10
+	syscall
 
 generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
 	#stack push
@@ -43,7 +48,7 @@ generatearray:#Loads the dictionary into a specified address, selects a random w
 	syscall	
 	
 	#jumble the word at the appropriate address.	
-	li $t1, 10 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
+	li $t1, 11 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
 	multu $a0, $t1
 	mflo $a0
 	addu $a0, $a0, $t0
@@ -104,7 +109,6 @@ readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=a
 	readlineloop:
 		li $v0, 14
 		syscall
-		
 		beq $v0, $0 readlineend #a status of zero means that the read has hit end of file	
 		addiu $a1, $a1, 16 #store the next character in the next byte.	
 	j readlineloop
@@ -159,8 +163,55 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 
 checkuserinput:
 
-ui:
-
-shuffle:
+drawgui: # prints 3x3 grid of the word at the address stored in $v0
+	move $t0, $v0 #moves address of selected jumbled word to $t0
+	li $v0, 11
+	lb  $a0, 1($t0) #prints first character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 2($t0) #prints second character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 3($t0) #prints third character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 4($t0) # prints fourth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 0($t0) # prints middle character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 5($t0) # prints sixth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 6($t0) # prints seventh character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 7($t0) # prints eighth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 8($t0) # prints ninth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	move $v0, $t0	#puts address of word back into $v0
+	jr $ra
+	
+shuffle: # $v0 is address of word to jumble
+	la $a0, ($v0)  # sets $a0 to address of word to jumble
+	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
+	jal jumble	# jumbles word
+	jal drawgui	# reprints gui
+	jr $ra
 
 
