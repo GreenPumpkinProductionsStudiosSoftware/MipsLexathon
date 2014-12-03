@@ -5,8 +5,13 @@ lexdict:  .asciiz "lexdict.txt"
 .text
 main:
 
+clockLoop:
+li $v0, 30
+syscall
+j clockLoop
 
-generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
+generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
+	      #arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
 	#stack push
 	addi $sp, $sp, -16
 	sw $ra, 0($sp)
@@ -43,7 +48,7 @@ generatearray:#Loads the dictionary into a specified address, selects a random w
 	syscall	
 	
 	#jumble the word at the appropriate address.	
-	li $t1, 10 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
+	li $t1, 11 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
 	multu $a0, $t1
 	mflo $a0
 	addu $a0, $a0, $t0
@@ -163,4 +168,16 @@ ui:
 
 shuffle:
 
+userInputSection:
+#time for all the input stuff
+startInput:
+li $t0, 0xffff0000
+li $t1, 0x00000002
+sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
 
+.ktext 0x80000180 #this lets you code in the interrupt section!
+li $k0, 12
+sb $k0, 0xffff000c
+lbu $k0, 0xffff0004 #loads the character typed into the keyboard
+sb $k0, 0xffff000c #stores that character into the display byte.
+eret #returns to the program
