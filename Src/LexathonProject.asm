@@ -8,6 +8,7 @@ main:
 clockLoop:
 li $v0, 30
 syscall
+teq $t1, $t0 #compare timer to things to send to interrupt
 j clockLoop
 
 generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
@@ -176,6 +177,10 @@ li $t1, 0x00000002
 sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
 
 .ktext 0x80000180 #this lets you code in the interrupt section!
+#need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
+displayInterrupt:
+timerInterrupt:
+keyboardInterrupt:
 li $k0, 12
 sb $k0, 0xffff000c
 lbu $k0, 0xffff0004 #loads the character typed into the keyboard
