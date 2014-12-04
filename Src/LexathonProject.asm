@@ -2,6 +2,8 @@
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 indexBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
+timerBegin: .word 0
+currTime: .word 0
 
 .text
 startInput:
@@ -10,12 +12,21 @@ li $t1, 0x00000002
 sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
 
 main:
+li $v0, 30 #get initial time
+syscall
+sw $a0, timerBegin
 
 clockLoop:
 li $v0, 30
 syscall
 #stuff
-teq $t1, $t0 #compare timer to things to send to interrupt
+#load and do math
+sw $a0, ($t2)
+lw  $t1, currTime
+slti $t1, $t2, 100
+sw $a0, currTime($0)
+addi $t8, $0, 1
+teq $t1, $t8 #compare timer to things to send to interrupt
 j clockLoop
 
 generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
@@ -29,7 +40,7 @@ generatearray:#Loads the dictionary into a specified address, selects a random w
 
 	move $t0, $a0
 	
-	li $v0, 13	
+	li $v0, 13
 	la $a0, lexdict9
 	li $a1, 0
 	li $a2, 0
@@ -40,7 +51,7 @@ generatearray:#Loads the dictionary into a specified address, selects a random w
 	move $a1, $t0
 	jal readfile
 
-	#get the system  time so i can use it as a seed
+	#get the system time so i can use it as a seed
 	li $v0, 30
 	syscall
 
@@ -183,26 +194,32 @@ userInputSection:
 #need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
 clockInterrupt:
 #updates clock, and then call the display refresh subroutine
+
 keyboardInterrupt:
 #checkIndexBuffer
-beq $t1, $0, loadChar
+#set t5 to a number that stores the first byte of the indexBuffer
+lb $t5, indexBuffer($0)
+beq $t5, $0, loadChar
 eret
+
 loadChar:
 lbu $k0, 0xffff0004 #loads the character typed into the keyboard
 addi $s7, $0, 13 #loads enter
 beq $k0, $s7, compareByEnter
+
 addCharIntoBuffer:
 #checkIndexBuffer Location
-
+addi $t5, $s0, 1
+lb $k1, indexBuffer($t5)
 #write
-
+sb $k0, indexBuffer($k1)
 eret #returns to the program
-compareByEnter:
-#check if read
 
+compareByEnter:
 #compare
 
 #delete string
+sb $0, indexBuffer($0)
 li $k0, 12
 sb $k0, 0xffff000c
 eret
