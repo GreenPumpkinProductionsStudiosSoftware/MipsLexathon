@@ -1,7 +1,7 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
-indexBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
+inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
 timeBegin: .word 0
 timeCurrent: .word 0
 timeString: .asciiz "0m 00s"
@@ -28,7 +28,7 @@ slti $t4, $t4, 1000
 sw $a0, timeCurrent
 addi $t7, $0, 1
 teq $t4, $t7 #compare timer to see if the time difference is greater than 1000 ms to send to interrupt
-lb $t7, indexBuffer($0)
+lb $t7, inputBuffer($0)
 beq $t7, $0, clockLoop
 
 checkInput:
@@ -227,8 +227,8 @@ eret
 
 keyboardInterrupt:
 #checkIndexBuffer
-#set t5 to a number that stores the first byte of the indexBuffer
-lb $t5, indexBuffer($0)
+#set t5 to a number that stores the first byte of the inputBuffer
+lb $t5, inputBuffer($0)
 beq $t5, $0, loadChar
 eret
 
@@ -239,17 +239,17 @@ beq $k0, $s7, compareByEnter
 
 addCharIntoBuffer:
 #checkIndexBuffer Location
-addi $t5, $s0, 4
-lb $k1, indexBuffer($t5)
-sll $k1, $k1, 2
+addi $t5, $0, 1
+lb $k1, inputBuffer($t5)
+addi, $k1, $k1, 3
 #write
-sb $k0, indexBuffer($k1)
+sb $k0, inputBuffer($k1)
 eret #returns to the program
 
 compareByEnter:
 #set read byte to 1
 addi $k1, $0, 1
-sb $k1, indexBuffer($0)
+sb $k1, inputBuffer($0)
 li $k0, 12
 sb $k0, 0xffff000c
 eret
