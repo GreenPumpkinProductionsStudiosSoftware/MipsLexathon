@@ -225,9 +225,53 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 
 checkuserinput:
 
-ui:
-
+drawgui: #prints grid display
+	li $v0, 11
+	lb  $a0, 1($t0) #prints first character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 2($t0) #prints second character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 3($t0) #prints third character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 4($t0) # prints fourth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 0($t0) # prints middle character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 5($t0) # prints sixth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 6($t0) # prints seventh character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 7($t0) # prints eighth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 8($t0) # prints ninth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	jr $ra
 shuffle:
+	la $a0, ($t0)
+	addi $a1, $0, 0x00000009
+	jal jumble
+	jal drawgui
+	jr $ra # code infinitely loops at this point
 
 
 
