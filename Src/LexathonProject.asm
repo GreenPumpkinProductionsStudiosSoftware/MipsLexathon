@@ -26,8 +26,7 @@ syscall
 lw  $t4, timeCurrent
 sub, $t4, $a0, $t4
 slti $t4, $t4, 1000
-sw $a0, timeCurrent
-addi $t7, $0, 1
+li $t7, 1
 teq $t4, $t7 #compare timer to see if the time difference is greater than 1000 ms to send to interrupt
 lb $t7, inputBuffer($0)
 beq $t7, $0, clockLoop
@@ -199,13 +198,14 @@ userInputSection:
 
 .ktext 0x80000180 #this lets you code in the interrupt section!
 #need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
-mfc0 $a0, $13 # $13 is cause register
-srl $a0, $a0, 2
-andi $a0, $a0, 31 # $a0=exception code
-beq $a0, $0, keyboardInterrupt
+mfc0 $a1, $13 # $13 is cause register
+srl $a1, $a1, 2
+andi $a1, $a1, 31 # $a0=exception code
+beq $a1, $1, keyboardInterrupt
 
 clockInterrupt:
 #updates clock, and then call the display refresh subroutine
+sw $a0, timeCurrent
 lw $t4, timeBegin
 sub $t4, $a0, $t4
 div $t4, $t4, 1000
