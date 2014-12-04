@@ -6,7 +6,7 @@ lexdict:  .asciiz "lexdict.txt"
 main:
 	addi $a0, $0, 0x10040000 #loads dictionary into 0x10040000, don't know if we actually want it there
 	jal generatearray
-	jal drawgui
+	jal drawgrid
 	jal shuffle
 	li $v0, 10
 	syscall
@@ -160,10 +160,14 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		lw $v0, 20($sp)	
 		addiu $sp, $sp, 24
 		jr $ra
+	
+shuffle: # $v0 is address of word to jumble
+	la $a0, ($v0)  # sets $a0 to address of word to jumble
+	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
+	jal jumble	# jumbles word
+	jr $ra
 
-checkuserinput:
-
-drawgui: # prints 3x3 grid of the word at the address stored in $v0
+drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 	move $t0, $v0 #moves address of selected jumbled word to $t0
 	li $v0, 11
 	lb  $a0, 1($t0) #prints first character
@@ -207,11 +211,16 @@ drawgui: # prints 3x3 grid of the word at the address stored in $v0
 	move $v0, $t0	#puts address of word back into $v0
 	jr $ra
 	
-shuffle: # $v0 is address of word to jumble
-	la $a0, ($v0)  # sets $a0 to address of word to jumble
-	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
-	jal jumble	# jumbles word
-	jal drawgui	# reprints gui
-	jr $ra
-
-
+drawclock:
+	sw 0xfff000c, timeVal
+	
+drawwordlist: #if \n character, print comma #if print more than 80 characters, new line # words list not added #t0 is iterator
+	
+	loop:
+		addi $t0, 0x00000001
+		
+		beq $0, drawwordlistend
+		j loop
+	drawwordlistend:
+		jr $ra
+	
