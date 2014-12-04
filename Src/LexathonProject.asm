@@ -214,6 +214,41 @@ combochecker:#Determines whether the characters in one \n-terminated string are 
 		lw $a1, 20($sp)
 		addiu $sp, $sp, 24
 		jr $ra
-checkanswo:#checks to determine whether the *answo* is in the solution list. Argumants: a0: location
+checkanswo:#checks to determine whether the *answo* is in the solution list. Argumants: a0: address of inputted string, a1: the starting address of the solutions list. returns v0=0 if no match is found, returns v0= address of word in list if found.
+	addiu $sp, $sp, -20
+	sw $t0, ($sp)
+	sw $t1, 4($sp)
+	sw $a0, 8($sp)
+	sw $a1, 12($sp)
+	sw $ra, 16($sp)
+
+	li $t1, 10	
+	loope:
+		jal strcpr #compares the word.
+		bneq $v0, $0, searchpositive #if that word is the same as the one the user typed in, then that solution is valid.
+		findnextword:#finds the next word by checking each byte until it finds a \n, and then increments a1 to the address after it.
+			addiu $a1, $a1, 1
+			lb $t0, ($a1)
+			bne $t0, $t1, findnextword #if the character at $a1 is not a \n, keep looking for one.
+				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
+				lb $t0, ($a1)
+				beq $t0, $0, searchnegative#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n, and beyond there be dragons. Data dragons. Sucky MARS dragons.
+							   #this would be if we wanted to null-terminate the solutions list. in reality this will probably be different. maybe instead of $0 ('\0' ) we terminate it with a form feed?
+				j loope
+	searchpositive:
+		move $v0, $a1
+		j answoexit
+	searchnegative:
+		move $v0, $0
+		j answoexit
+	answoexit:
+		lw $t0, ($sp)
+		lw $t1, 4($sp)
+		lw $a0, 8($sp)
+		lw $a1, 12($sp)
+		lw $ra, 16($sp)
+		addiu $sp, $sp, 20 
+		jr $ra
+	
 findsolutions:
 
