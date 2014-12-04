@@ -1,13 +1,17 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+dictionary: .asciiz "aardvark\nkiwi\nabbot\nsuper\nbanana\ncream\nzebra\ndog\nfox\nfish\nwaffle\npig\nbird"
 
 .text
 main:
 	addi $a0, $0, 0x10040000 #loads dictionary into 0x10040000, don't know if we actually want it there
 	jal generatearray
 	jal drawgrid
-	jal shuffle
+	jal getplausiblewords
+	li $v0, 4
+	addi $a0, $a0, 0x1005a000
+	syscall
 	li $v0, 10
 	syscall
 
@@ -211,16 +215,47 @@ drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 	move $v0, $t0	#puts address of word back into $v0
 	jr $ra
 	
-drawclock:
-	sw 0xfff000c, timeVal
+#drawclock:
+	#sw 0xfff000c, timeVal
 	
-drawwordlist: #if \n character, print comma #if print more than 80 characters, new line # words list not added #t0 is iterator
+#drawwordlist: #if \n character, print comma #if print more than 80 characters, new line # words list not added #t0 is iterator
 	
-	loop:
-		addi $t0, 0x00000001
+	#loop:
+		#addi $t0, 0x00000001
 		
-		beq $0, drawwordlistend
-		j loop
-	drawwordlistend:
+		#beq $0, drawwordlistend
+		#j loop
+	#drawwordlistend:
+		#jr $ra
+		
+getplausiblewords:
+	lb $t0, 0($v0) # loads letter to search for into $t0
+	li $t1, 0 # initializes register to count how many chars have been looked at since last new line
+	li $t3, 0 # initializes register to count how many chars have been looked at total
+	li $t4, 0 # index in plausible word list
+	wordloop:
+		lb $t2, dictionary($t3) # loads next byte in dictionary
+		addi $t1, $t1 1 # $t1++
+		addi $t3, $t3 1 # $t3++
+		beq $t2, $t0, found # branches if letter is found
+		beq $t2, 0x0000000a, newline # branches if byte is new line
+		beq $t2, 0x00000000, end # signals that all data has been read
+		j wordloop
+	found:
+		sub $t3, $t3, $t1 # decrements counter back to last new line
+		foundloop:
+			lb $t2, dictionary($t3) # loads next byte in dictionary
+			sb $t2, 0x1005a000($t4) # adds byte to plausible word list
+			addi $t3, $t3, 1 # $t3++
+			addi $t4, $t4, 1 # $t4++
+			beq $t2, 0x0000000a, newline # branches if byte is new line
+			beq $t2, 0x00000000, end # signals that all data has been read
+			j foundloop
+	newline:
+		move $t1, $0 # resets counter to 0
+		j wordloop
+	end:
 		jr $ra
+		
+		
 	
