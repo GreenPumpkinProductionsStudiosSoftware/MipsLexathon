@@ -2,8 +2,9 @@
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 indexBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
-timerBegin: .word 0
-currTime: .word 0
+timeBegin: .word 0
+timeCurrent: .word 0
+timeString: .asciiz "0m 00s"
 
 .text
 startInput:
@@ -14,20 +15,23 @@ sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the seco
 main:
 li $v0, 30 #get initial time
 syscall
-sw $a0, timerBegin
+sw $a0, timeBegin
 
 clockLoop:
 li $v0, 30
 syscall
 #stuff
 #load and do math
-sw $a0, ($t2)
-lw  $t1, currTime
-slti $t1, $t2, 100
-sw $a0, currTime($0)
-addi $t8, $0, 1
-teq $t1, $t8 #compare timer to things to send to interrupt
-j clockLoop
+lw  $t4, timeCurrent
+sub, $t4, $a0, $t4
+slti $t4, $t4, 1000
+sw $a0, timeCurrent
+addi $t7, $0, 1
+teq $t4, $t7 #compare timer to see if the time difference is greater than 1000 ms to send to interrupt
+lb $t7, indexBuffer($0)
+beq $t7, $0, clockLoop
+
+checkInput:
 
 generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
 	      #arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
@@ -187,13 +191,39 @@ ui:
 
 shuffle:
 
+
+
 userInputSection:
 #time for all the input stuff
 
 .ktext 0x80000180 #this lets you code in the interrupt section!
 #need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
+mfc0 $a0, $13 # $13 is cause register
+srl $a0, $a0, 2
+andi $a0, $a0, 31 # $a0=exception code
+beq $a0, $0, keyboardInterrupt
+
 clockInterrupt:
 #updates clock, and then call the display refresh subroutine
+lw $t4, timeBegin
+li $t5, 60
+li $t7, 10
+sub $t4, $a0, $t4
+div $t4, $t5
+mflo $t4
+mfhi $t5
+addi $t4, $t4, 48
+sb $t4, timeString($0)
+div $t5, $t7
+mflo $t4
+mfhi $t5
+addi $t4, $t4, 48
+addi $t5, $t5, 48
+li $t7, 4
+sb $t4, timeString($t7)
+li $t4, 5
+sb $t5, timeString($t4)
+eret
 
 keyboardInterrupt:
 #checkIndexBuffer
@@ -209,17 +239,17 @@ beq $k0, $s7, compareByEnter
 
 addCharIntoBuffer:
 #checkIndexBuffer Location
-addi $t5, $s0, 1
+addi $t5, $s0, 4
 lb $k1, indexBuffer($t5)
+sll $k1, $k1, 2
 #write
 sb $k0, indexBuffer($k1)
 eret #returns to the program
 
 compareByEnter:
-#compare
-
-#delete string
-sb $0, indexBuffer($0)
+#set read byte to 1
+addi $k1, $0, 1
+sb $k1, indexBuffer($0)
 li $k0, 12
 sb $k0, 0xffff000c
 eret
