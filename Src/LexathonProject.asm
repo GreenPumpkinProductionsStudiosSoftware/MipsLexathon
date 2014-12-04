@@ -5,6 +5,7 @@ lexdict:  .asciiz "lexdict.txt"
 .text
 main:
 
+
 generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
 	#stack push
 	addi $sp, $sp, -16
@@ -32,8 +33,7 @@ generatearray:#Loads the dictionary into a specified address, selects a random w
 
 	#set the seed
 	move $a1, $a0 #seed will be system time.
-	li $a0, 1     #random number generator id will be one.
-	li $v0, 40
+	li $a0, 1     #random number generator id will be one.  li $v0, 40
 	syscall
 		
 	#generate random number	
@@ -63,19 +63,22 @@ checkarray:
 	
 strcpr:#takes arguments a0=the address of the first string, a1=the address of the second string. returns v0=1 if strings match, v0=0 if they do not.
 	#stack push
-	addiu $sp, $sp, -16
+	addiu $sp, $sp, -20
 	sw $t0, 0($sp)
 	sw $t1, 4($sp)
 	sw $a0, 8($sp)
 	sw $a1, 12($sp)
-
-	lb $t0, ($a0)
-	lb $t1, ($a1)
-	bne $t1, $t0, strcprfalse
-	beq $t1, $0, strcprtrue #if t1 is equal to 0 and we know t1 and t0 are equal, then we can conclude that we have reached the end of the strings and that the strings are equal. note that in order for this function to work, both strings must be null-terminated.
-	addiu $a0, $a0, 1
-	addiu $a1, $a1, 1
-	j strcpr
+	sw $t2, 16($sp)
+	
+	strcprloop:	
+		li $t2, 10
+		lb $t0, ($a0)
+		lb $t1, ($a1)
+		bne $t1, $t0, strcprfalse
+		beq $t1, $t2, strcprtrue #if t1 is equal to \n and we know t1 and t0 are equal, then we can conclude that we have reached the end of the strings and that the strings are equal. note that in order for this function to work, both strings must be \n-terminated.
+		addiu $a0, $a0, 1
+		addiu $a1, $a1, 1
+		j strcprloop
 	strcprfalse:
 		addu $v0, $0, $0
 		j strcprexit	
@@ -88,7 +91,8 @@ strcpr:#takes arguments a0=the address of the first string, a1=the address of th
 		lw $t1, 4($sp)
 		lw $a0, 8($sp)
 		lw $a1, 12($sp)
-		addiu $sp, $sp, 16
+		lw $t2, 16($sp)
+		addiu $sp, $sp, 20 
 		jr $ra
 			
 	
@@ -225,7 +229,7 @@ checkanswo:#checks to determine whether the *answo* is in the solution list. Arg
 	li $t1, 10	
 	loope:
 		jal strcpr #compares the word.
-		bneq $v0, $0, searchpositive #if that word is the same as the one the user typed in, then that solution is valid.
+		bne $v0, $0, searchpositive #if that word is the same as the one the user typed in, then that solution is valid.
 		findnextword:#finds the next word by checking each byte until it finds a \n, and then increments a1 to the address after it.
 			addiu $a1, $a1, 1
 			lb $t0, ($a1)
@@ -250,5 +254,25 @@ checkanswo:#checks to determine whether the *answo* is in the solution list. Arg
 		addiu $sp, $sp, 20 
 		jr $ra
 	
+nullterminate:#converts a \n-terminated string into a null-terminated string. arguments: a0= address of string to NULL THE TERMINATE
+	addiu $sp, $sp, -12
+	sw $t0, ($sp)
+	sw $t1, 4($sp)
+	sw $a0, 8($sp)
+	li $t1, 10	
+	nullterminateloop:
+		lb $t0, ($a0)
+		beq $t0, $t1, nullify
+		addiu $a0, $a0, 1
+		j nullterminateloop
+	nullify:
+		sb $0, ($a0)
+		
+		lw $t0, ($sp)
+		lw $t1, 4($sp)
+		lw $a0, 8($sp)
+		addiu $sp, $sp, 12
+		jr $ra
+
 findsolutions:
 
