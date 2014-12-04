@@ -2,7 +2,11 @@
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
-timeVal: .word 500
+timeVal: .word 10000
+timer: .word 100
+lost: .asciiz "\nYou lost lolol"
+winrar: .asciiz "like a baws"
+answerCount: .word 0
 
 .text
 startInput:
@@ -12,17 +16,60 @@ sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the seco
 
 main:
 
-clockLoop:
+clockLoop1:
 lw $a1, timeVal
-subi $a1, $a1, 1
-sw $a1, timeVal
+lw $a2, timer
+subi $a2, $a2, 1
+sw $a2, timer
 li $v0, 1
 la $a0, ($a1)
 syscall
-j clockLoop
-loopConditions:
+nop
+nop
+nop
+nop
+beqz $a2, updateClock
+beqz $a1, lostCondition
+j clockLoop1
+
+lostCondition:
+li $v0, 4
+la $a0, lost
+syscall
+li $v0, 10
+syscall
+
+wonCondition:
+li $v0, 4
+la $a0, winrar
+li $v0, 10
+syscall
+
+updateClock:
+lw $a1, timeVal
+subi $a1, $a1, 1
+sw $a1, timeVal($0)
+li $a2, 10
+sw $a2, timer($0)
+j clockLoop1
+
+checkToFindAnswerCount:
+#loop through array of characters, when letter=13, add 1
+lb $a0, answerCount
+li $a2, 10
+li $t1, 0
+answerCounter:
+lb $a1, arrayOfAnswers($t1)
+bne $a1, $a2, ansCtr
+addi $a0, $a0, 1
+ansCtr:
+addi $t1, $t1, 1
+beqz $a1, wonCondition
+j answerCounter
 
 checkInput:
+
+
 
 generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
 	      #arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
