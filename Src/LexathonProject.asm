@@ -1,13 +1,20 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+indexBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
 
 .text
+startInput:
+li $t0, 0xffff0000
+li $t1, 0x00000002
+sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
+
 main:
 
 clockLoop:
 li $v0, 30
 syscall
+#stuff
 teq $t1, $t0 #compare timer to things to send to interrupt
 j clockLoop
 
@@ -144,9 +151,9 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 
 		syscall #generate a random number between 0 and the length of the string starting at 1
 		
-		addiu $a0, $a0, 1#alignment for starting the string with the 1st character instead of the 0th
+		addiu $a0, $a0, 1 #alignment for starting the string with the 1st character instead of the 0th
 		subu $t2, $t0, $a0 #the character in address $t1 will be flipped with the character in the address $t2
-		lb $a0, ($t2)#flips each character in the string with another random character in the string.
+		lb $a0, ($t2) #flips each character in the string with another random character in the string.
 		lb $v0, ($t1)
 		sb $a0, ($t1)
 		sb $v0, ($t2)	
@@ -159,7 +166,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		lw $t2, 8($sp)	
 		lw $a0, 12($sp)
 		lw $a1, 16($sp)
-		lw $v0, 20($sp)	
+		lw $v0, 20($sp)
 		addiu $sp, $sp, 24
 		jr $ra
 
@@ -171,18 +178,33 @@ shuffle:
 
 userInputSection:
 #time for all the input stuff
-startInput:
-li $t0, 0xffff0000
-li $t1, 0x00000002
-sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
 
 .ktext 0x80000180 #this lets you code in the interrupt section!
 #need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
-displayInterrupt:
-timerInterrupt:
+clockInterrupt:
+#updates clock, and then call the display refresh subroutine
 keyboardInterrupt:
+#checkIndexBuffer
+beq $t1, $0, loadChar
+eret
+loadChar:
+lbu $k0, 0xffff0004 #loads the character typed into the keyboard
+addi $s7, $0, 13 #loads enter
+beq $k0, $s7, compareByEnter
+addCharIntoBuffer:
+#checkIndexBuffer Location
+
+#write
+
+eret #returns to the program
+compareByEnter:
+#check if read
+
+#compare
+
+#delete string
 li $k0, 12
 sb $k0, 0xffff000c
-lbu $k0, 0xffff0004 #loads the character typed into the keyboard
-sb $k0, 0xffff000c #stores that character into the display byte.
-eret #returns to the program
+eret
+
+
