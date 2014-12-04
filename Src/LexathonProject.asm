@@ -5,7 +5,6 @@ lexdict:  .asciiz "lexdict.txt"
 .text
 main:
 
-
 generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
 	#stack push
 	addi $sp, $sp, -16
@@ -163,4 +162,58 @@ ui:
 
 shuffle:
 
+combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
+	addiu $sp, $sp, -24
+	sw $t0, ($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	sw $t3, 12($sp)
+	sw $a0, 16($sp)
+	sw $a1, 20($sp)
+
+	li $t1, 10 #ASCII 10 = '\n'. Used as constant; we will need to make this comparison frequently
+	checka0loop:
+		lb $t3, ($a0) #character being searched for in subset string is in $t3
+		beq $t3, $t1, comboloopexit #if that character is \n, then we have hit the end of the string.
+		move $t0, $a1
+		checka1loop:
+			lb $t2, ($t0)
+			beq $t2, $t1, a1loopexit #if read hits \n, time to search for a different character
+			bne $t2, $t3, noclearchar
+				sb $0 ($t0) #executes if we have found the character we are looking for 
+				j a1loopexit
+			noclearchar:
+				addiu $t0, $t0, 1
+				j checka1loop
+		a1loopexit:
+			addiu $a0, $a0, 1
+			j checka0loop
+	comboloopexit:
+	#then it sums up the string
+	move $t0, $a1	
+	move $t3, $0	
+	sumchars:
+		lb $t2 ($t0)
+		beq $t2, $t1, combosetv0
+		addu $t3, $t3, $t2
+		addiu $t0, $t0, 1
+		j sumchars
+	combosetv0:
+		bne $t3, $0 comboreturn0 
+			li $v0, 1 #executes if $t3=0
+			j comboexit
+		comboreturn0:
+			move $v0, $0 #executes if $t3!=0, meaning there are non-null characters in the string.
+			j comboexit
+	comboexit:
+		lw $t0, ($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $t3, 12($sp)
+		lw $a0, 16($sp)
+		lw $a1, 20($sp)
+		addiu $sp, $sp, 24
+		jr $ra
+checkanswo:#checks to determine whether the *answo* is in the solution list. Argumants: a0: location
+findsolutions:
 
