@@ -4,7 +4,8 @@ lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
 timeBegin: .word 0
 timeCurrent: .word 0
-timeString: .asciiz "0m 00s"
+timeVal: .word 500
+timeFull: .word 500
 
 .text
 startInput:
@@ -206,23 +207,11 @@ beq $a0, $0, keyboardInterrupt
 clockInterrupt:
 #updates clock, and then call the display refresh subroutine
 lw $t4, timeBegin
-li $t5, 60
-li $t7, 10
 sub $t4, $a0, $t4
-div $t4, $t5
-mflo $t4
-mfhi $t5
-addi $t4, $t4, 48
-sb $t4, timeString($0)
-div $t5, $t7
-mflo $t4
-mfhi $t5
-addi $t4, $t4, 48
-addi $t5, $t5, 48
-li $t7, 4
-sb $t4, timeString($t7)
-li $t4, 5
-sb $t5, timeString($t4)
+div $t4, $t4, 1000
+la $t7, timeFull
+sub $t4, $t7, $t4
+sw $t4, timeVal
 eret
 
 keyboardInterrupt:
