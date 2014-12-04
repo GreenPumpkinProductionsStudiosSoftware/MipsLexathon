@@ -2,10 +2,10 @@
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
-timeBegin: .word 0
 timeCurrent: .word 0
+timeLast: .word 0
 timeVal: .word 500
-timeFull: .word 500
+do: .asciiz "\n\n"
 
 .text
 startInput:
@@ -16,18 +16,18 @@ sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the seco
 main:
 li $v0, 30 #get initial time
 syscall
-sw $a0, timeBegin
+sw $a0, timeLast
 
 clockLoop:
 li $v0, 30
 syscall
 #stuff
 #load and do math
-lw  $t4, timeCurrent
-sub, $t4, $a0, $t4
+lw  $t4, timeLast
+sw $a0, timeCurrent
+subu  $t4, $a0, $t4
 slti $t4, $t4, 1000
-li $t7, 1
-teq $t4, $t7 #compare timer to see if the time difference is greater than 1000 ms to send to interrupt
+teq $t4, $0 #compare timer to see if the time difference is greater than 1000 ms to send to interrupt
 lb $t7, inputBuffer($0)
 beq $t7, $0, clockLoop
 
@@ -198,19 +198,37 @@ userInputSection:
 
 .ktext 0x80000180 #this lets you code in the interrupt section!
 #need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
+li $v0, 1
+la $a0, ($a0)
+syscall
+li $v0, 4
+la $a0, do
+syscall
 mfc0 $a1, $13 # $13 is cause register
 srl $a1, $a1, 2
 andi $a1, $a1, 31 # $a0=exception code
-beq $a1, $1, keyboardInterrupt
+beq $a1, $0, keyboardInterrupt
 
 clockInterrupt:
 #updates clock, and then call the display refresh subroutine
-sw $a0, timeCurrent
-lw $t4, timeBegin
-sub $t4, $a0, $t4
-div $t4, $t4, 1000
-la $t7, timeFull
-sub $t4, $t7, $t4
+lw $t4, timeLast
+lw $a0, timeCurrent
+subu $t4, $a0, $t4
+li $v0, 1
+la $a0, ($t4)
+syscall
+li $v0, 4
+la $a0, do
+syscall
+divu $t4, $t4, 10000
+li $v0, 1
+la $a0, ($t4)
+syscall
+li $v0, 4
+la $a0, do
+syscall
+la $t7, timeVal
+subu $t4, $t7, $t4
 sw $t4, timeVal
 eret
 
@@ -239,8 +257,6 @@ compareByEnter:
 #set read byte to 1
 addi $k1, $0, 1
 sb $k1, inputBuffer($0)
-li $k0, 12
-sb $k0, 0xffff000c
 eret
 
 
