@@ -1,14 +1,13 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
-dictionary: .asciiz "aardvark\nkiwi\nabbot\nsuper\nbanana\ncream\nzebra\ndog\nfox\nfish\nwaffle\npig\nbird"
 
 .text
 main:
 	addi $a0, $0, 0x10040000 #loads dictionary into 0x10040000, don't know if we actually want it there
 	jal generatearray
 	jal drawgrid
-	jal getplausiblewords
+	#jal getplausiblewords
 	li $v0, 4
 	addi $a0, $a0, 0x1005a000
 	syscall
@@ -42,8 +41,7 @@ generatearray:#Loads the dictionary into a specified address, selects a random w
 
 	#set the seed
 	move $a1, $a0 #seed will be system time.
-	li $a0, 1     #random number generator id will be one.
-	li $v0, 40
+	li $a0, 1     #random number generator id will be one.  li $v0, 40
 	syscall
 		
 	#generate random number	
@@ -68,24 +66,25 @@ generatearray:#Loads the dictionary into a specified address, selects a random w
 	lw $a1, 12($sp)
 	addiu $sp, $sp, 16
 	jr $ra
-
-checkarray:
 	
 strcpr:#takes arguments a0=the address of the first string, a1=the address of the second string. returns v0=1 if strings match, v0=0 if they do not.
 	#stack push
-	addiu $sp, $sp, -16
+	addiu $sp, $sp, -20
 	sw $t0, 0($sp)
 	sw $t1, 4($sp)
 	sw $a0, 8($sp)
 	sw $a1, 12($sp)
-
-	lb $t0, ($a0)
-	lb $t1, ($a1)
-	bne $t1, $t0, strcprfalse
-	beq $t1, $0, strcprtrue #if t1 is equal to 0 and we know t1 and t0 are equal, then we can conclude that we have reached the end of the strings and that the strings are equal. note that in order for this function to work, both strings must be null-terminated.
-	addiu $a0, $a0, 1
-	addiu $a1, $a1, 1
-	j strcpr
+	sw $t2, 16($sp)
+	
+	strcprloop:	
+		li $t2, 10
+		lb $t0, ($a0)
+		lb $t1, ($a1)
+		bne $t1, $t0, strcprfalse
+		beq $t1, $t2, strcprtrue #if t1 is equal to \n and we know t1 and t0 are equal, then we can conclude that we have reached the end of the strings and that the strings are equal. note that in order for this function to work, both strings must be \n-terminated.
+		addiu $a0, $a0, 1
+		addiu $a1, $a1, 1
+		j strcprloop
 	strcprfalse:
 		addu $v0, $0, $0
 		j strcprexit	
@@ -98,9 +97,9 @@ strcpr:#takes arguments a0=the address of the first string, a1=the address of th
 		lw $t1, 4($sp)
 		lw $a0, 8($sp)
 		lw $a1, 12($sp)
-		addiu $sp, $sp, 16
-		jr $ra
-			
+		lw $t2, 16($sp)
+		addiu $sp, $sp, 20 
+		jr $ra			
 	
 readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=address of input buffer.  returns v0, the file status
 	#stack push	
@@ -234,7 +233,7 @@ getplausiblewords:
 	li $t3, 0 # initializes register to count how many chars have been looked at total
 	li $t4, 0 # index in plausible word list
 	wordloop:
-		lb $t2, dictionary($t3) # loads next byte in dictionary
+		#lb $t2, dictionary($t3) # loads next byte in dictionary NEED TO REPLACE "dictionary"!!!!!!!
 		addi $t1, $t1 1 # $t1++
 		addi $t3, $t3 1 # $t3++
 		beq $t2, $t0, found # branches if letter is found
@@ -244,7 +243,7 @@ getplausiblewords:
 	found:
 		sub $t3, $t3, $t1 # decrements counter back to last new line
 		foundloop:
-			lb $t2, dictionary($t3) # loads next byte in dictionary
+			#lb $t2, dictionary($t3) # loads next byte in dictionary NEED TO REPLACE DICTIONARY!!!!!!
 			sb $t2, 0x1005a000($t4) # adds byte to plausible word list
 			addi $t3, $t3, 1 # $t3++
 			addi $t4, $t4, 1 # $t4++
@@ -256,6 +255,111 @@ getplausiblewords:
 		j wordloop
 	end:
 		jr $ra
-		
-		
+
+combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
+	addiu $sp, $sp, -24
+	sw $t0, ($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	sw $t3, 12($sp)
+	sw $a0, 16($sp)
+	sw $a1, 20($sp)
+
+	li $t1, 10 #ASCII 10 = '\n'. Used as constant; we will need to make this comparison frequently
+	checka0loop:
+		lb $t3, ($a0) #character being searched for in subset string is in $t3
+		beq $t3, $t1, comboloopexit #if that character is \n, then we have hit the end of the string.
+		move $t0, $a1
+		checka1loop:
+			lb $t2, ($t0)
+			beq $t2, $t1, a1loopexit #if read hits \n, time to search for a different character
+			bne $t2, $t3, noclearchar
+				sb $0 ($t0) #executes if we have found the character we are looking for 
+				j a1loopexit
+			noclearchar:
+				addiu $t0, $t0, 1
+				j checka1loop
+		a1loopexit:
+			addiu $a0, $a0, 1
+			j checka0loop
+	comboloopexit:
+	#then it sums up the string
+	move $t0, $a1	
+	move $t3, $0	
+	sumchars:
+		lb $t2 ($t0)
+		beq $t2, $t1, combosetv0
+		addu $t3, $t3, $t2
+		addiu $t0, $t0, 1
+		j sumchars
+	combosetv0:
+		bne $t3, $0 comboreturn0 
+			li $v0, 1 #executes if $t3=0
+			j comboexit
+		comboreturn0:
+			move $v0, $0 #executes if $t3!=0, meaning there are non-null characters in the string.
+			j comboexit
+	comboexit:
+		lw $t0, ($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $t3, 12($sp)
+		lw $a0, 16($sp)
+		lw $a1, 20($sp)
+		addiu $sp, $sp, 24
+		jr $ra
+checkanswo:#checks to determine whether the *answo* is in the solution list. Argumants: a0: address of inputted string, a1: the starting address of the solutions list. returns v0=0 if no match is found, returns v0= address of word in list if found.
+	addiu $sp, $sp, -20
+	sw $t0, ($sp)
+	sw $t1, 4($sp)
+	sw $a0, 8($sp)
+	sw $a1, 12($sp)
+	sw $ra, 16($sp)
+
+	li $t1, 10	
+	loope:
+		jal strcpr #compares the word.
+		bne $v0, $0, searchpositive #if that word is the same as the one the user typed in, then that solution is valid.
+		findnextword:#finds the next word by checking each byte until it finds a \n, and then increments a1 to the address after it.
+			addiu $a1, $a1, 1
+			lb $t0, ($a1)
+			bne $t0, $t1, findnextword #if the character at $a1 is not a \n, keep looking for one.
+				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
+				lb $t0, ($a1)
+				beq $t0, $0, searchnegative#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n, and beyond there be dragons. Data dragons. Sucky MARS dragons.
+							   #this would be if we wanted to null-terminate the solutions list. in reality this will probably be different. maybe instead of $0 ('\0' ) we terminate it with a form feed?
+				j loope
+	searchpositive:
+		move $v0, $a1
+		j answoexit
+	searchnegative:
+		move $v0, $0
+		j answoexit
+	answoexit:
+		lw $t0, ($sp)
+		lw $t1, 4($sp)
+		lw $a0, 8($sp)
+		lw $a1, 12($sp)
+		lw $ra, 16($sp)
+		addiu $sp, $sp, 20 
+		jr $ra
 	
+nullterminate:#converts a \n-terminated string into a null-terminated string. arguments: a0= address of string to NULL THE TERMINATE
+	addiu $sp, $sp, -12
+	sw $t0, ($sp)
+	sw $t1, 4($sp)
+	sw $a0, 8($sp)
+	li $t1, 10	
+	nullterminateloop:
+		lb $t0, ($a0)
+		beq $t0, $t1, nullify
+		addiu $a0, $a0, 1
+		j nullterminateloop
+	nullify:
+		sb $0, ($a0)
+		
+		lw $t0, ($sp)
+		lw $t1, 4($sp)
+		lw $a0, 8($sp)
+		addiu $sp, $sp, 12
+		jr $ra
