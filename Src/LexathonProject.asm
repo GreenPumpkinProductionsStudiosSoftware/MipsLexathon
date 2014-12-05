@@ -1,8 +1,7 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
-inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
-timeVal: .word 10000
+inputBuffer: .byte 0,0,'A','C','E','R','T','V','B','G','Y'
 timer: .word 100
 lost: .asciiz "\nYou lost lolol"
 winrar: .asciiz "like a baws"
@@ -16,21 +15,11 @@ sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the seco
 
 main:
 
-clockLoop1:
-lw $a1, timeVal
-lw $a2, timer
-subi $a2, $a2, 1
-sw $a2, timer
-li $v0, 1
-la $a0, ($a1)
-syscall
-nop
-nop
-nop
-nop
-beqz $a2, updateClock
-beqz $a1, lostCondition
-j clockLoop1
+clockLoop:
+la $a3, timer($0)
+beqz $a3, lostCondition
+#jal drawgui
+j clockLoop
 
 lostCondition:
 li $v0, 4
@@ -45,21 +34,13 @@ la $a0, winrar
 li $v0, 10
 syscall
 
-updateClock:
-lw $a1, timeVal
-subi $a1, $a1, 1
-sw $a1, timeVal($0)
-li $a2, 10
-sw $a2, timer($0)
-j clockLoop1
-
 checkToFindAnswerCount:
 #loop through array of characters, when letter=13, add 1
 lb $a0, answerCount
 li $a2, 10
 li $t1, 0
 answerCounter:
-lb $a1, arrayOfAnswers($t1)
+lb $a1, answerCount($t1)
 bne $a1, $a2, ansCtr
 addi $a0, $a0, 1
 ansCtr:
@@ -226,6 +207,8 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 checkuserinput:
 
 drawgui: #prints grid display
+	li $t1, 2
+	la $t0, inputBuffer($t1)
 	li $v0, 11
 	lb  $a0, 1($t0) #prints first character
 	syscall
@@ -280,6 +263,10 @@ userInputSection:
 
 .ktext 0x80000180 #this lets you code in the interrupt section!
 #need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
+li $v0, 1
+li $a0, 5
+syscall
+eret
 
 keyboardInterrupt:
 #checkIndexBuffer
