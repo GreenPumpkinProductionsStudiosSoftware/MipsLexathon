@@ -1,15 +1,33 @@
+# lexdict9 is loaded at 0x10040000, lexdict is loaded at 0x1005a000, the plausible words list is loaded at 0x100bad20
+#solutions list is loaded at 0x10110000, solution to compare loaded at 0x10058d00
+
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+sfound: .asciiz "found!\n"
 
 .text
 main:
-	addi $a0, $0, 0x10040000 #loads dictionary into 0x10040000, don't know if we actually want it there
+	addi $a0, $0, 0x10040000 #loads dictionary9 into 0x10040000, don't know if we actually want it there
 	jal generatearray
+	move $t0, $v0
+	
+	li $v0, 13	
+	la $a0, lexdict
+	li $a1, 0
+	li $a2, 0
+	syscall
+	move $a0, $v0
+	addi $a1, $0, 0x1005a000 # loads dictionary into 0x1005a000
+	jal readfile
+	
+	move $v0, $t0
 	jal drawgrid
 	jal getplausiblewords
+	jal createsolutionsstring
 	li $v0, 4
-	addi $a0, $a0, 0x1005a000
+	la $a0, 0x10110000
+	syscall
 	li $v0, 10
 	syscall
 
@@ -232,7 +250,7 @@ getplausiblewords:
 	li $t3, 0 # initializes register to count how many chars have been looked at total
 	li $t4, 0 # index in plausible word list
 	wordloop:
-		lb $t2, dictionary($t3) # loads next byte in dictionary NEED TO REPLACE "dictionary"!!!!!!!
+		lb $t2, 0x1005a000($t3) # loads next byte in dictionary
 		addi $t1, $t1 1 # $t1++
 		addi $t3, $t3 1 # $t3++
 		beq $t2, $t0, found # branches if letter is found
@@ -242,8 +260,8 @@ getplausiblewords:
 	found:
 		sub $t3, $t3, $t1 # decrements counter back to last new line
 		foundloop:
-			lb $t2, dictionary($t3) # loads next byte in dictionary NEED TO REPLACE DICTIONARY!!!!!!
-			sb $t2, 0x1005a000($t4) # adds byte to plausible word list
+			lb $t2, 0x1005a000($t3) # loads next byte in dictionary
+			sb $t2, 0x100bad20($t4) # adds byte to plausible word list
 			addi $t3, $t3, 1 # $t3++
 			addi $t4, $t4, 1 # $t4++
 			beq $t2, 0x0000000a, newline # branches if byte is new line
@@ -259,28 +277,38 @@ createsolutionsstring:
 	move $a0, $v0 # puts address of string into $a0
 	move $t0, $0 # resets counter for number of characters in possible solution string
 	move $t1, $0 # prepares counter for solutions list
+	move $t3, $0 # counter for copy location
 	createloop:
-		la $a1, 0x1005a000($t0) # loads address for beginning of word
-		jal combochecker
-		beq $v0, 0x00000001, matchfound # branch if combochecker finds a possible solution
-		seeknewline:
-			lb $t2, 0x1005a000($t0)
-			addi $t0, $t0, 1 # $t0++
-			beq $t2, 0x0000000a, createloop # new line found
-			j seeknewline
-	matchfound:
-		move $t3, $t0 # prepares counter
-		matchfoundloop:
-			lb $t4, 0x1005a000($t3) # loads next byte
-			sb $t4, 0x10060000($t1) # adds byte to solutions list
-			addi $t1, $t1, 1 # $t1++
-			addi $t3, $t3, 1 #$t3++
-			beq $t4, 0x0000000a, returncreateloop # branches if byte is new line
-			beq $t4, 0x00000000, returncreateloop # branches if no more data
-			j matchfoundloop
-		returncreateloop:
-			move $t0, $t3 #sets $t0 to $t3
+		lb $t2, 0x100bad20($t0) # loads byte for comparison
+		sb $t2, 0x10058d00($t3) # moves byte to copy location
+		addi $t0, $t0, 1 #$t0++
+		addi $t3, $t3, 1 #$t3++
+		beq $t2, 0x0000000a, callcombochecker
+		beq $t2, 0x00000000, endsolutions # ends if bottom is reached
+		j createloop
+		callcombochecker:
+			la $a1, 0x10058d00 #loads address of where word is loaded
+			jal combochecker
+			beq $v0, 0x00000001, matchfound # branch if combochecker finds a possible solution
+			move $t3, $0 # resets counter for copy location
 			j createloop
+		matchfound:
+			move $t3, $0 #resets counter
+			matchfoundloop:
+				lb $t2, 0x10058d00($t3) # loads next byte
+				sb $t2, 0x10110000($t1) # adds byte to solutions list
+				addi $t1, $t1, 1 # $t1++
+				addi $t3, $t3, 1 #$t0++
+				beq $t2, 0x0000000a, matchend # branches if byte is new line
+				beq $t2, 0x00000000, matchend # branches if no more data
+				j matchfoundloop
+			matchend:
+				move $t3, $0
+				j createloop
+	endsolutions:
+		addi $t2, $0, 0x000000c # puts a null terminator at the end of the solutions list
+		sb $t2, 0x10110000($t1)
+		jr $ra
 
 combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
 	addiu $sp, $sp, -24
