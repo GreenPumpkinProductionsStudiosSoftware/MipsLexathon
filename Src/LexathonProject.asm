@@ -7,10 +7,9 @@ main:
 	addi $a0, $0, 0x10040000 #loads dictionary into 0x10040000, don't know if we actually want it there
 	jal generatearray
 	jal drawgrid
-	#jal getplausiblewords
+	jal getplausiblewords
 	li $v0, 4
 	addi $a0, $a0, 0x1005a000
-	syscall
 	li $v0, 10
 	syscall
 
@@ -233,7 +232,7 @@ getplausiblewords:
 	li $t3, 0 # initializes register to count how many chars have been looked at total
 	li $t4, 0 # index in plausible word list
 	wordloop:
-		#lb $t2, dictionary($t3) # loads next byte in dictionary NEED TO REPLACE "dictionary"!!!!!!!
+		lb $t2, dictionary($t3) # loads next byte in dictionary NEED TO REPLACE "dictionary"!!!!!!!
 		addi $t1, $t1 1 # $t1++
 		addi $t3, $t3 1 # $t3++
 		beq $t2, $t0, found # branches if letter is found
@@ -243,7 +242,7 @@ getplausiblewords:
 	found:
 		sub $t3, $t3, $t1 # decrements counter back to last new line
 		foundloop:
-			#lb $t2, dictionary($t3) # loads next byte in dictionary NEED TO REPLACE DICTIONARY!!!!!!
+			lb $t2, dictionary($t3) # loads next byte in dictionary NEED TO REPLACE DICTIONARY!!!!!!
 			sb $t2, 0x1005a000($t4) # adds byte to plausible word list
 			addi $t3, $t3, 1 # $t3++
 			addi $t4, $t4, 1 # $t4++
@@ -255,6 +254,33 @@ getplausiblewords:
 		j wordloop
 	end:
 		jr $ra
+
+createsolutionsstring:
+	move $a0, $v0 # puts address of string into $a0
+	move $t0, $0 # resets counter for number of characters in possible solution string
+	move $t1, $0 # prepares counter for solutions list
+	createloop:
+		la $a1, 0x1005a000($t0) # loads address for beginning of word
+		jal combochecker
+		beq $v0, 0x00000001, matchfound # branch if combochecker finds a possible solution
+		seeknewline:
+			lb $t2, 0x1005a000($t0)
+			addi $t0, $t0, 1 # $t0++
+			beq $t2, 0x0000000a, createloop # new line found
+			j seeknewline
+	matchfound:
+		move $t3, $t0 # prepares counter
+		matchfoundloop:
+			lb $t4, 0x1005a000($t3) # loads next byte
+			sb $t4, 0x10060000($t1) # adds byte to solutions list
+			addi $t1, $t1, 1 # $t1++
+			addi $t3, $t3, 1 #$t3++
+			beq $t4, 0x0000000a, returncreateloop # branches if byte is new line
+			beq $t4, 0x00000000, returncreateloop # branches if no more data
+			j matchfoundloop
+		returncreateloop:
+			move $t0, $t3 #sets $t0 to $t3
+			j createloop
 
 combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
 	addiu $sp, $sp, -24
