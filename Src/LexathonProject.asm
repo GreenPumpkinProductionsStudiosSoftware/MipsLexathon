@@ -4,7 +4,6 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
-sfound: .asciiz "found!\n"
 
 .text
 main:
@@ -278,6 +277,10 @@ createsolutionsstring:
 	move $t0, $0 # resets counter for number of characters in possible solution string
 	move $t1, $0 # prepares counter for solutions list
 	move $t3, $0 # counter for copy location
+	
+	addiu $sp, $sp, -4 # saves return address
+	sw $ra, ($sp)
+	
 	createloop:
 		lb $t2, 0x100bad20($t0) # loads byte for comparison
 		sb $t2, 0x10058d00($t3) # moves byte to copy location
@@ -309,7 +312,8 @@ createsolutionsstring:
 	endsolutions:
 		addi $t2, $0, 0x000000c # puts a null terminator at the end of the solutions list
 		sb $t2, 0x10110000($t1)
-		sw $ra, 0x00400050
+		lw $ra, ($sp) # reloads return address
+		addiu $sp, $sp, 4
 		jr $ra
 
 combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
