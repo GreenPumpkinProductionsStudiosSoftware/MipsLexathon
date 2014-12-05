@@ -281,6 +281,7 @@ createsolutionsstring:
 	createloop:
 		lb $t2, 0x100bad20($t0) # loads byte for comparison
 		sb $t2, 0x10058d00($t3) # moves byte to copy location
+		sb $t2, 0x10058d20 ($t3) # restores byte
 		addi $t0, $t0, 1 #$t0++
 		addi $t3, $t3, 1 #$t3++
 		beq $t2, 0x0000000a, callcombochecker
@@ -289,13 +290,13 @@ createsolutionsstring:
 		callcombochecker:
 			la $a1, 0x10058d00 #loads address of where word is loaded
 			jal combochecker
-			beq $v0, 0x00000001, matchfound # branch if combochecker finds a possible solution
+			beq $v0, 1, matchfound # branch if combochecker finds a possible solution
 			move $t3, $0 # resets counter for copy location
 			j createloop
 		matchfound:
 			move $t3, $0 #resets counter
 			matchfoundloop:
-				lb $t2, 0x10058d00($t3) # loads next byte
+				lb $t2, 0x10058d20($t3) # loads next byte
 				sb $t2, 0x10110000($t1) # adds byte to solutions list
 				addi $t1, $t1, 1 # $t1++
 				addi $t3, $t3, 1 #$t0++
@@ -308,6 +309,7 @@ createsolutionsstring:
 	endsolutions:
 		addi $t2, $0, 0x000000c # puts a null terminator at the end of the solutions list
 		sb $t2, 0x10110000($t1)
+		sw $ra, 0x00400050
 		jr $ra
 
 combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
