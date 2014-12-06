@@ -5,8 +5,9 @@ lexdict:  .asciiz "lexdict.txt"
 .text
 main:
 
-
-generatearray:#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected word. 
+#Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
+#arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected (and jumbled)word. 
+generatearray:	
 	#stack push
 	addi $sp, $sp, -16
 	sw $ra, 0($sp)
@@ -218,26 +219,35 @@ combochecker:#Determines whether the characters in one \n-terminated string are 
 		lw $a1, 20($sp)
 		addiu $sp, $sp, 24
 		jr $ra
-checkanswo:#checks to determine whether the *answo* is in the solution list. Argumants: a0: address of inputted string, a1: the starting address of the solutions list. returns v0=0 if no match is found, returns v0= address of word in list if found.
-	addiu $sp, $sp, -20
+
+#checks to determine whether the *answo* is in the \f-terminated solution list. 
+#Argumants: a0: address of inputted string, a1: the starting address of the solutions list. returns v0=0 if no match is found, returns v0= address of word in list if found.
+checkanswo:
+	addiu $sp, $sp, -24
 	sw $t0, ($sp)
 	sw $t1, 4($sp)
 	sw $a0, 8($sp)
 	sw $a1, 12($sp)
 	sw $ra, 16($sp)
+	sw $t2, 20($sp)
 
-	li $t1, 10	
+	li $t1, 10
+	li $t2, 13
 	loope:
 		jal strcpr #compares the word.
 		bne $v0, $0, searchpositive #if that word is the same as the one the user typed in, then that solution is valid.
 		findnextword:#finds the next word by checking each byte until it finds a \n, and then increments a1 to the address after it.
 			addiu $a1, $a1, 1
-			lb $t0, ($a1)
-			bne $t0, $t1, findnextword #if the character at $a1 is not a \n, keep looking for one.
+			lb $t0, ($a1) 
+			beq $t0, $t2, loopeagain
+			beq $t0, $t1, loopeagain #if the character at $a1 is an \n or \r, then we're ready to read a word.
+			j findnextword	
+			loopeagain	
 				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
 				lb $t0, ($a1)
-				beq $t0, $0, searchnegative#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n, and beyond there be dragons. Data dragons. Sucky MARS dragons.
-							   #this would be if we wanted to null-terminate the solutions list. in reality this will probably be different. maybe instead of $0 ('\0' ) we terminate it with a form feed?
+				beq $t0, $t2, searchnegative	#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n,
+								#which would normally set the program back to loope. this prevents this by checking for the terminating character, which we have assigned to be
+								#\f 	
 				j loope
 	searchpositive:
 		move $v0, $a1
@@ -251,7 +261,8 @@ checkanswo:#checks to determine whether the *answo* is in the solution list. Arg
 		lw $a0, 8($sp)
 		lw $a1, 12($sp)
 		lw $ra, 16($sp)
-		addiu $sp, $sp, 20 
+		lw $t2, 20($sp)
+		addiu $sp, $sp, 24
 		jr $ra
 	
 nullterminate:#converts a \n-terminated string into a null-terminated string. arguments: a0= address of string to NULL THE TERMINATE
@@ -259,6 +270,7 @@ nullterminate:#converts a \n-terminated string into a null-terminated string. ar
 	sw $t0, ($sp)
 	sw $t1, 4($sp)
 	sw $a0, 8($sp)
+
 	li $t1, 10	
 	nullterminateloop:
 		lb $t0, ($a0)
@@ -276,3 +288,4 @@ nullterminate:#converts a \n-terminated string into a null-terminated string. ar
 
 findsolutions:
 
+horfdorf:#when the user enters a valid solution to the puzzle, this happens. arguments: a0=the address of the word in the solution list that needs to be moved. 
