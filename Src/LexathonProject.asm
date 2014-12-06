@@ -4,8 +4,18 @@
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+inputBuffer: .byte 0,0,'A','C','E','R','T','V','B','G','Y'
+timer: .word 100
+lost: .asciiz "\nYou lost lolol"
+winrar: .asciiz "like a baws"
+answerCount: .word 0
 
 .text
+startInput:
+li $t0, 0xffff0000
+li $t1, 0x00000002
+sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
+
 main:
 	addi $a0, $0, 0x10040000 #loads dictionary9 into 0x10040000, don't know if we actually want it there
 	jal generatearray
@@ -30,6 +40,43 @@ main:
 	li $v0, 10
 	syscall
 
+clockLoop:
+	la $a3, timer($0)
+	beqz $a3, lostCondition
+	#jal drawgui
+	j clockLoop
+
+lostCondition:
+	li $v0, 4
+	la $a0, lost
+	syscall
+	li $v0, 10
+	syscall
+
+wonCondition:
+	li $v0, 4
+	la $a0, winrar
+	li $v0, 10
+	syscall
+
+checkToFindAnswerCount:
+	#loop through array of characters, when letter=13, add 1
+	lb $a0, answerCount
+	li $a2, 10
+	li $t1, 0
+	answerCounter:
+	lb $a1, answerCount($t1)
+	bne $a1, $a2, ansCtr
+	addi $a0, $a0, 1
+	ansCtr:
+	addi $t1, $t1, 1
+	beqz $a1, wonCondition
+	j answerCounter
+
+checkInput:
+
+
+
 #Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
 #arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected (and jumbled)word. 
 generatearray:
@@ -42,7 +89,7 @@ generatearray:
 
 	move $t0, $a0
 	
-	li $v0, 13	
+	li $v0, 13
 	la $a0, lexdict9
 	li $a1, 0
 	li $a2, 0
@@ -53,7 +100,7 @@ generatearray:
 	move $a1, $t0
 	jal readfile
 
-	#get the system  time so i can use it as a seed
+	#get the system time so i can use it as a seed
 	li $v0, 30
 	syscall
 
@@ -163,7 +210,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 
 		syscall #generate a random number between 0 and the length of the string starting at 1
 		
-		addiu $a0, $a0, 1#alignment for starting the string with the 1st character instead of the 0th
+		addiu $a0, $a0, 1 #alignment for starting the string with the 1st character instead of the 0th
 		subu $t2, $t0, $a0 #the character in address $t1 will be flipped with the character in the address $t2
 		lb $a0, ($t2) #flips each character in the string with another random character in the string.
 		lb $v0, ($t1)
@@ -178,7 +225,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		lw $t2, 8($sp)	
 		lw $a0, 12($sp)
 		lw $a1, 16($sp)
-		lw $v0, 20($sp)	
+		lw $v0, 20($sp)
 		addiu $sp, $sp, 24
 		jr $ra
 	
@@ -277,6 +324,7 @@ getplausiblewords:
 		j wordloop
 	end:
 		jr $ra
+
 
 createsolutionsstring:
 	move $a0, $v0 # puts address of string into $a0
@@ -441,6 +489,89 @@ nullterminate:#converts a \n-terminated string into a null-terminated string. ar
 		lw $a0, 8($sp)
 		addiu $sp, $sp, 12
 		jr $ra
+
+drawgui: #prints grid display
+	li $t1, 2
+	la $t0, inputBuffer($t1)
+	li $v0, 11
+	lb  $a0, 1($t0) #prints first character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 2($t0) #prints second character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 3($t0) #prints third character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 4($t0) # prints fourth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 0($t0) # prints middle character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 5($t0) # prints sixth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 6($t0) # prints seventh character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 7($t0) # prints eighth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 8($t0) # prints ninth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	jr $ra
+
+
+userInputSection:
+#time for all the input stuff
+
+.ktext 0x80000180 #this lets you code in the interrupt section!
+#need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
+li $v0, 1
+li $a0, 5
+syscall
+eret
+
+keyboardInterrupt:
+	#checkIndexBuffer
+	#set t5 to a number that stores the first byte of the inputBuffer
+	lb $t5, inputBuffer($0)
+	beq $t5, $0, loadChar
+	eret
+
+loadChar:
+	lbu $k0, 0xffff0004 #loads the character typed into the keyboard
+	addi $s7, $0, 13 #loads enter
+	beq $k0, $s7, compareByEnter
+
+addCharIntoBuffer:
+	#checkIndexBuffer Location
+	addi $t5, $0, 1
+	lb $k1, inputBuffer($t5)
+	addi, $k1, $k1, 3
+	#write
+	sb $k0, inputBuffer($k1)
+	eret #returns to the program
+
+compareByEnter:
+	#set read byte to 1
+	addi $k1, $0, 1
+	sb $k1, inputBuffer($0)
+	eret
+
 
 findsolutions:
 
