@@ -163,7 +163,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		
 		addiu $a0, $a0, 1#alignment for starting the string with the 1st character instead of the 0th
 		subu $t2, $t0, $a0 #the character in address $t1 will be flipped with the character in the address $t2
-		lb $a0, ($t2)#flips each character in the string with another random character in the string.
+		lb $a0, ($t2) #flips each character in the string with another random character in the string.
 		lb $v0, ($t1)
 		sb $a0, ($t1)
 		sb $v0, ($t2)	
@@ -181,9 +181,13 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		jr $ra
 	
 shuffle: # $v0 is address of word to jumble
-	la $a0, ($v0)  # sets $a0 to address of word to jumble
+	addiu $sp, $sp, -4 # store $ra in the stack
+	sw $ra, ($sp)
+	move $a0, $v0  # sets $a0 to address of word to jumble
 	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
 	jal jumble	# jumbles word
+	lw $ra, ($sp) # reloads return address
+	addiu $sp, $sp, 4
 	jr $ra
 
 drawgrid: # prints 3x3 grid of the word at the address stored in $v0
@@ -314,6 +318,7 @@ createsolutionsstring:
 		sb $t2, 0x10110000($t1)
 		lw $ra, ($sp) # reloads return address
 		addiu $sp, $sp, 4
+		move $v0, $a0 # restores address of jumbled word to $v0
 		jr $ra
 
 combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
