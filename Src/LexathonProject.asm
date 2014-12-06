@@ -1,13 +1,38 @@
+# lexdict9 is loaded at 0x10040000, lexdict is loaded at 0x1005a000, the plausible words list is loaded at 0x100bad20
+#solutions list is loaded at 0x10110000, solution to compare loaded at 0x10058d00
+
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 
 .text
 main:
+	addi $a0, $0, 0x10040000 #loads dictionary9 into 0x10040000, don't know if we actually want it there
+	jal generatearray
+	move $t0, $v0
+	
+	li $v0, 13	
+	la $a0, lexdict
+	li $a1, 0
+	li $a2, 0
+	syscall
+	move $a0, $v0
+	addi $a1, $0, 0x1005a000 # loads dictionary into 0x1005a000
+	jal readfile
+	
+	move $v0, $t0
+	jal drawgrid
+	jal getplausiblewords
+	jal createsolutionsstring
+	li $v0, 4
+	la $a0, 0x10110000
+	syscall
+	li $v0, 10
+	syscall
 
 #Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
 #arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected (and jumbled)word. 
-generatearray:	
+generatearray:
 	#stack push
 	addi $sp, $sp, -16
 	sw $ra, 0($sp)
@@ -43,7 +68,7 @@ generatearray:
 	syscall	
 	
 	#jumble the word at the appropriate address.	
-	li $t1, 10 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
+	li $t1, 11 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
 	multu $a0, $t1
 	mflo $a0
 	addu $a0, $a0, $t0
@@ -59,8 +84,6 @@ generatearray:
 	lw $a1, 12($sp)
 	addiu $sp, $sp, 16
 	jr $ra
-
-checkarray:
 	
 strcpr:#takes arguments a0=the address of the first string, a1=the address of the second string. returns v0=1 if strings match, v0=0 if they do not.
 	#stack push
@@ -94,8 +117,7 @@ strcpr:#takes arguments a0=the address of the first string, a1=the address of th
 		lw $a1, 12($sp)
 		lw $t2, 16($sp)
 		addiu $sp, $sp, 20 
-		jr $ra
-			
+		jr $ra			
 	
 readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=address of input buffer.  returns v0, the file status
 	#stack push	
@@ -108,7 +130,6 @@ readfile: #reads all lines from a file file. arguments: a0= file descriptor a1=a
 	readlineloop:
 		li $v0, 14
 		syscall
-		
 		beq $v0, $0 readlineend #a status of zero means that the read has hit end of file	
 		addiu $a1, $a1, 16 #store the next character in the next byte.	
 	j readlineloop
@@ -144,7 +165,7 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		
 		addiu $a0, $a0, 1#alignment for starting the string with the 1st character instead of the 0th
 		subu $t2, $t0, $a0 #the character in address $t1 will be flipped with the character in the address $t2
-		lb $a0, ($t2)#flips each character in the string with another random character in the string.
+		lb $a0, ($t2) #flips each character in the string with another random character in the string.
 		lb $v0, ($t1)
 		sb $a0, ($t1)
 		sb $v0, ($t2)	
@@ -160,12 +181,147 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 		lw $v0, 20($sp)	
 		addiu $sp, $sp, 24
 		jr $ra
+	
+shuffle: # $v0 is address of word to jumble
+	addiu $sp, $sp, -4 # store $ra in the stack
+	sw $ra, ($sp)
+	move $a0, $v0  # sets $a0 to address of word to jumble
+	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
+	jal jumble	# jumbles word
+	lw $ra, ($sp) # reloads return address
+	addiu $sp, $sp, 4
+	jr $ra
 
-checkuserinput:
+drawgrid: # prints 3x3 grid of the word at the address stored in $v0
+	move $t0, $v0 #moves address of selected jumbled word to $t0
+	li $v0, 11
+	lb  $a0, 1($t0) #prints first character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 2($t0) #prints second character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 3($t0) #prints third character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 4($t0) # prints fourth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 0($t0) # prints middle character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 5($t0) # prints sixth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 6($t0) # prints seventh character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 7($t0) # prints eighth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 8($t0) # prints ninth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	move $v0, $t0	#puts address of word back into $v0
+	jr $ra
+	
+#drawclock:
+	#sw 0xfff000c, timeVal
+	
+#drawwordlist: #if \n character, print comma #if print more than 80 characters, new line # words list not added #t0 is iterator
+	
+	#loop:
+		#addi $t0, 0x00000001
+		
+		#beq $0, drawwordlistend
+		#j loop
+	#drawwordlistend:
+		#jr $ra
+		
+getplausiblewords:
+	lb $t0, 0($v0) # loads letter to search for into $t0
+	li $t1, 0 # initializes register to count how many chars have been looked at since last new line
+	li $t3, 0 # initializes register to count how many chars have been looked at total
+	li $t4, 0 # index in plausible word list
+	wordloop:
+		lb $t2, 0x1005a000($t3) # loads next byte in dictionary
+		addi $t1, $t1 1 # $t1++
+		addi $t3, $t3 1 # $t3++
+		beq $t2, $t0, found # branches if letter is found
+		beq $t2, 0x0000000a, newline # branches if byte is new line
+		beq $t2, 0x00000000, end # signals that all data has been read
+		j wordloop
+	found:
+		sub $t3, $t3, $t1 # decrements counter back to last new line
+		foundloop:
+			lb $t2, 0x1005a000($t3) # loads next byte in dictionary
+			sb $t2, 0x100bad20($t4) # adds byte to plausible word list
+			addi $t3, $t3, 1 # $t3++
+			addi $t4, $t4, 1 # $t4++
+			beq $t2, 0x0000000a, newline # branches if byte is new line
+			beq $t2, 0x00000000, end # signals that all data has been read
+			j foundloop
+	newline:
+		move $t1, $0 # resets counter to 0
+		j wordloop
+	end:
+		jr $ra
 
-ui:
-
-shuffle:
+createsolutionsstring:
+	move $a0, $v0 # puts address of string into $a0
+	move $t0, $0 # resets counter for number of characters in possible solution string
+	move $t1, $0 # prepares counter for solutions list
+	move $t3, $0 # counter for copy location
+	
+	addiu $sp, $sp, -4 # saves return address
+	sw $ra, ($sp)
+	
+	createloop:
+		lb $t2, 0x100bad20($t0) # loads byte for comparison
+		sb $t2, 0x10058d00($t3) # moves byte to copy location
+		sb $t2, 0x10058d20 ($t3) # restores byte
+		addi $t0, $t0, 1 #$t0++
+		addi $t3, $t3, 1 #$t3++
+		beq $t2, 0x0000000a, callcombochecker
+		beq $t2, 0x00000000, endsolutions # ends if bottom is reached
+		j createloop
+		callcombochecker:
+			la $a1, 0x10058d00 #loads address of where word is loaded
+			jal combochecker
+			beq $v0, 1, matchfound # branch if combochecker finds a possible solution
+			move $t3, $0 # resets counter for copy location
+			j createloop
+		matchfound:
+			move $t3, $0 #resets counter
+			matchfoundloop:
+				lb $t2, 0x10058d20($t3) # loads next byte
+				sb $t2, 0x10110000($t1) # adds byte to solutions list
+				addi $t1, $t1, 1 # $t1++
+				addi $t3, $t3, 1 #$t0++
+				beq $t2, 0x0000000a, matchend # branches if byte is new line
+				beq $t2, 0x00000000, matchend # branches if no more data
+				j matchfoundloop
+			matchend:
+				move $t3, $0
+				j createloop
+	endsolutions:
+		addi $t2, $0, 0x000000c # puts a null terminator at the end of the solutions list
+		sb $t2, 0x10110000($t1)
+		lw $ra, ($sp) # reloads return address
+		addiu $sp, $sp, 4
+		move $v0, $a0 # restores address of jumbled word to $v0
+		jr $ra
 
 combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
 	addiu $sp, $sp, -24
