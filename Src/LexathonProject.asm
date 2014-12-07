@@ -19,7 +19,8 @@ sw $a1, 8($sp)
 mfc0 $s1, $13 # $13 is cause register
 srl $s1, $s1, 2
 andi $s1, $s1, 31 # $a0=exception code
-beq $s1, $0, keyboardInterrupt #Clock interrupt is not 0, and that is all we care about.
+li  $s2, 13
+bne $s1, $s2, keyboardInterrupt #Clock interrupt is not 0, and that is all we care about.
 
 clockInterrupt:
 	addiu $sp, $sp, -4
@@ -31,7 +32,7 @@ clockInterrupt:
 	
 	lw $s1, ($sp)
 	addiu $sp, $sp, 4
-	j ExitKernel
+	j Display
 
 keyboardInterrupt:
 	addiu $sp, $sp, -16
@@ -274,6 +275,8 @@ solutionsRemaining: .word 0
 timeString: .asciiz "000 seconds"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
+lost: .asciiz "ow lose"
+winrar: .asciiz "wow win"
 
 .text
 startInput:
@@ -305,14 +308,16 @@ main:
 	syscall
 #Gameplay loop loops while the user is playing.
 GamePlay:
+	li $s7, 1
 	addiu $sp, $sp, -4
 	sw $ra, ($sp)
+	tlti $s7, 2
 
-	GamePlayLoop:	
+	GamePlayLoop:
 		lw $t0, timer($0)
 		beqz $t0, lostCondition
 		lb $t0, inputBuffer($0)
-		bne $t0, $0, parseinput
+		bne $t0, $0, parseInput
 		lw $t0, solutionsRemaining($0)
 		beq $t0, $0 wonCondition 
 		j GamePlayLoop 
@@ -322,13 +327,12 @@ GamePlay:
 		syscall
 		li $v0, 10
 		syscall
-		j exitGamePlayLoop
 	wonCondition:
 		li $v0, 4
 		la $a0, winrar
+		syscall
 		li $v0, 10
-		syscall	
-		j exitGamePlayLoop
+		syscall
 		parseInput:
 			#clears screens
 			li $t0, 12
@@ -336,10 +340,10 @@ GamePlay:
 
 			#checks to see if user input the quit string
 			la $a1, exitString
-			la $a0, inputbuffer($0)
+			la $a0, inputBuffer($0)
 			addiu $a0, $a0, 2
 			jal strcpr
-			bne $v0, $0, quit
+			bne $v0, $0, exitGamePlayLoop
 			
 			#checks to see if the user input the shffle string
 			la $a1, shuffleString
@@ -349,7 +353,7 @@ GamePlay:
 			#checks to see if the string that the user input is valid.
 			li $a1, 0x10110000 #starting address of solutions list
 			jal checkanswo
-			beq $v0, $0, invalid
+			beq $v0, $0, GamePlayLoop
 			
 			#executes horfdorf
 			move $a0, $v0 #$v0, and now $a0, contains the word that needs to be transferred.
@@ -369,6 +373,7 @@ GamePlay:
 			jal shuffle
 			j exitParse
 		exitParse: #clears the buffer and allows for writing into the buffer again
+			tlti $s7, 2
 			li $t0, 1
 			li $t1, 10
 			exitParseLoop:
@@ -562,6 +567,15 @@ getplausiblewords:
 		beq $t2, 0x00000000, end # signals that all data has been read
 		j wordloop
 	found:
+		addiu $sp, $sp, -8
+		sw $v0, ($sp)
+		sw $a0, 4($sp)
+		li $v0, 4
+		la $a0, timeString
+		syscall
+		lw $v0, ($sp)
+		lw $a0, 4($sp)
+		addiu $sp, $sp, 8
 		sub $t3, $t3, $t1 # decrements counter back to last new line
 		foundloop:
 			lb $t2, 0x1005a000($t3) # loads next byte in dictionary
@@ -615,6 +629,9 @@ createsolutionsstring:
 				j matchfoundloop
 			matchend:
 				move $t3, $0
+				lw $t4, solutionsRemaining
+				addi $t4, $t4, 1
+				sw $t4, solutionsRemaining
 				j createloop
 	endsolutions:
 		addi $t2, $0, 0x000000c # puts a null terminator at the end of the solutions list
@@ -702,7 +719,7 @@ checkanswo:
 			beq $t0, $t1, loopeagain #if the character at $a1 is an \n or \r, then we're ready to read a word.
 			j findnextword	
 			loopeagain:	
-				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
+				addiu $a1, $a1, 2 #IMPORTANT: windows users change this to a two before running. I think.
 				lb $t0, ($a1)
 				beq $t0, $t2, searchnegative	#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n,
 								#which would normally set the program back to loope. this prevents this by checking for the terminating character, which we have assigned to be
