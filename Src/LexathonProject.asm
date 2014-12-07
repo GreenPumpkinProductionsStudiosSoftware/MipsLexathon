@@ -13,8 +13,11 @@ mfc0 $a1, $13 # $13 is cause register
 srl $a1, $a1, 2
 andi $a1, $a1, 31 # $a0=exception code
 beq $a1, $0, keyboardInterrupt
-clockInterrupt:
 
+clockInterrupt:
+li $a1, timer
+subi $a1, $a1, 1
+sw $a1, timer
 
 keyboardInterrupt:
 	#checkIndexBuffer
