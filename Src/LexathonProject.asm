@@ -70,7 +70,34 @@ getTimeString: #put into t4 the seconds, gets each number and makes a string
 	jr $ra
 
 Display:
-	
+
+#print a \f terminated string.
+#arguments: a0= starting address of string to print.
+printFF:
+	addiu $sp, $sp, -16	
+	sw $s0, ($sp)
+	sw $s1, 4($sp)
+	sw $s9, 8($sp)
+	sw $a0, 12($sp)
+
+	#Decimal Value 12 = \f
+	li 	$s9, 12
+	la 	$s0, $a0 
+
+	outputCycle:
+		lb	$s1, ($s0)
+		beq	$s1, $s9, return
+		sb	$s1, 0xFFFF000C
+		addi	$s0, $s0, 1
+			j	outputCycle
+			
+	return:
+		lw $s0, ($sp)
+		lw $s1, 4($sp)
+		lw $s9, 8($sp)
+		lw $a0, 12($sp)
+		addiu $sp, $sp, 16	
+		jr 	$ra
 ExitKernel:
 	lw $ra ($sp)
 	addiu $sp, $sp, 4
