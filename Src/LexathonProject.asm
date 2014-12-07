@@ -163,11 +163,15 @@ Display:
 	li $a0, 13
 	sb $s1, 0xFFFF000C
 	la $a0, timeString
-	jal printFF
+	jal printN
+	li $a0, 10
+	sw $a0, 0xffff000c
 	jal drawgrid
 	jal getWordString
 	la $a0, wordsRemaining
-	jal printFF
+	jal printN
+	li $a0, 10
+	sw $a0, 0xffff000c
 	la $a0, 0x10040000
 	jal printFF
 	lw $s1, ($sp)
@@ -202,7 +206,31 @@ printFF:
 		lw $a0, 12($sp)
 		addiu $sp, $sp, 16	
 		jr 	$ra
-		
+printN:
+	addiu $sp, $sp, -16
+	sw $s0, ($sp)
+	sw $s1, 4($sp)
+	sw $s2, 8($sp)
+	sw $a0, 12($sp)
+
+	#Decimal Value 12 = \f
+	li 	$s2, 10
+	la 	$s0, ($a0)
+	
+	outputCycleN:
+		lb	$s1, ($s0)
+		beq	$s1, $s2, return
+		sb	$s1, 0xFFFF000C
+		addi	$s0, $s0, 1
+		j outputCycle
+			
+	returnN:
+		lw $s0, ($sp)
+		lw $s1, 4($sp)
+		lw $s2, 8($sp)
+		lw $a0, 12($sp)
+		addiu $sp, $sp, 16	
+		jr 	$ra		
 drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 	addiu $sp, $sp, -16
 	sw $s1, ($sp)
@@ -270,9 +298,9 @@ lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 0,0,0,0,0,0,0,0,0
 timer: .word 100
-wordsRemaining: .asciiz "000 words remaining"
+wordsRemaining: .asciiz "000 words remaining\n"
 solutionsRemaining: .word 0
-timeString: .asciiz "000 seconds"
+timeString: .asciiz "000 seconds\n"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 lost: .asciiz "ow lose"
@@ -567,15 +595,6 @@ getplausiblewords:
 		beq $t2, 0x00000000, end # signals that all data has been read
 		j wordloop
 	found:
-		addiu $sp, $sp, -8
-		sw $v0, ($sp)
-		sw $a0, 4($sp)
-		li $v0, 4
-		la $a0, timeString
-		syscall
-		lw $v0, ($sp)
-		lw $a0, 4($sp)
-		addiu $sp, $sp, 8
 		sub $t3, $t3, $t1 # decrements counter back to last new line
 		foundloop:
 			lb $t2, 0x1005a000($t3) # loads next byte in dictionary
