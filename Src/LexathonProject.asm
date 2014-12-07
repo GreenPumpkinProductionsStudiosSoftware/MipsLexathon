@@ -108,11 +108,12 @@ getTimeString: #put into t4 the seconds, gets each number and makes a string
 	li $s5, 10
 	li $s6, 2
 	div $s4, $s5
+	mflo $s4
 	mfhi $s5
 	addi $s5, $s5, 48
 	sb $s5, timeString($s6)
 	li $s6, 10
-	div $s5, $s6
+	div $s4, $s6
 	mflo $s4
 	mfhi $s5
 	addi $s4, $s4, 48
@@ -298,7 +299,7 @@ lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 0,0,0,0,0,0,0,0,0
-timer: .word 500
+timer: .word 99
 wordsRemaining: .asciiz "000 words remaining\n"
 solutionsRemaining: .word 0
 timeString: .asciiz "000 seconds\n"
