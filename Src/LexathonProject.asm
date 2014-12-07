@@ -22,11 +22,14 @@ clockInterrupt:
 	la $s1, timer
 	subi $s1, $s1, 1
 	sw $s1, timer
+	j ExitKernel
 
 keyboardInterrupt:
 	#checkIndexBuffer
 	#set t5 to a number that stores the first byte of the inputBuffer
 	lb $t5, inputBuffer($0)
+	li $t0, 8
+	beq $t5, $t0, backspace
 	beq $t5, $0, loadChar
 	j ExitKernel
 	loadChar:
@@ -41,13 +44,15 @@ keyboardInterrupt:
 		addi, $k1, $k1, 3
 		#write
 		sb $k0, inputBuffer($k1)
-		eret #returns to the program
+		j ExitKernel #returns to the program
 
 	compareByEnter:
 		#set read byte to 1
 		addi $k1, $0, 1
 		sb $k1, inputBuffer($0)
-		eret
+		j ExitKernel
+	backspace:
+
 
 #converts the the value in timer into a string that can be used for printing.
 getTimeString: #put into t4 the seconds, gets each number and makes a string
@@ -137,9 +142,12 @@ main:
 
 #Gameplay loop loops while the user is playing.
 GamePlayLoop:
-	la $a3, timer($0)
-	beqz $a3, lostCondition
-	#jal drawgui
+	lw $t0, timer($0)
+	beqz $t0, lostCondition
+	lb $t0, inputBuffer($0)
+	bne $t0, $0, parseinput
+	lw $t0, solutionsRemaining($0)
+	beq $t0, $0 wonCondition 
 	j clockLoop
 
 lostCondition:
@@ -155,8 +163,8 @@ wonCondition:
 	li $v0, 10
 	syscall
 
-checkInput:
-
+parseInput:
+	
 
 
 #Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
