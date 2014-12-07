@@ -95,17 +95,17 @@ getWordString: #put into t4 the seconds, gets each number and makes a string
 	jr $ra
 
 Display:
-li $a0, 13
-sb $s1, 0xFFFF000C
-la $a0, timeString
-jal printFF
-jal drawgrid
-jal getWordString
-la $a0, wordsRemaining
-jal printFF
-la $a0, 0x10040000
-jal printFF
-j ExitKernel 
+	li $a0, 13
+	sb $s1, 0xFFFF000C
+	la $a0, timeString
+	jal printFF
+	jal drawgrid
+	jal getWordString
+	la $a0, wordsRemaining
+	jal printFF
+	la $a0, 0x10040000
+	jal printFF
+	j ExitKernel 
 
 #print a \f terminated string.
 #arguments: a0= starting address of string to print.
@@ -193,7 +193,8 @@ timer: .word 100
 wordsRemaining: .asciiz "000 words remaining"
 solutionsRemaining: .word 0
 timeString: .asciiz "000 seconds"
-
+exitString: .asciiz "q\n"
+shuffleString: .asciiz "\n"
 
 .text
 startInput:
@@ -216,31 +217,83 @@ main:
 	jal readfile
 
 #Gameplay loop loops while the user is playing.
-GamePlayLoop:
-	lw $t0, timer($0)
-	beqz $t0, lostCondition
-	lb $t0, inputBuffer($0)
-	bne $t0, $0, parseinput
-	lw $t0, solutionsRemaining($0)
-	beq $t0, $0 wonCondition 
-	j GamePlayLoop 
+GamePlay:
+	addiu $sp, $sp, -4
+	sw $ra, ($sp)
 
-lostCondition:
-	li $v0, 4
-	la $a0, lost
-	syscall
-	li $v0, 10
-	syscall
+	GamePlayLoop:	
+		lw $t0, timer($0)
+		beqz $t0, lostCondition
+		lb $t0, inputBuffer($0)
+		bne $t0, $0, parseinput
+		lw $t0, solutionsRemaining($0)
+		beq $t0, $0 wonCondition 
+		j GamePlayLoop 
+	lostCondition:
+		li $v0, 4
+		la $a0, lost
+		syscall
+		li $v0, 10
+		syscall
+		j exitGamePlayLoop
+	wonCondition:
+		li $v0, 4
+		la $a0, winrar
+		li $v0, 10
+		syscall	
+		j exitGamePlayLoop
+		parseInput:
+			#clears screens
+			li $t0, 12
+			sw $t0, 0xffff000c 
 
-wonCondition:
-	li $v0, 4
-	la $a0, winrar
-	li $v0, 10
-	syscall
-
-parseInput:
-	
-
+			#checks to see if user input the quit string
+			la $a1, exitString
+			la $a0, inputbuffer($0)
+			addiu $a0, $a0, 2
+			jal strcpr
+			bne $v0, $0, quit
+			
+			#checks to see if the user input the shffle string
+			la $a1, shuffleString
+			jal strcpr
+			bne $v0 $0, shuffleIt
+			
+			#checks to see if the string that the user input is valid.
+			li $a1, 0x10110000 #starting address of solutions list
+			jal checkanswo
+			beq $v0, $0, invalid
+			
+			#executes horfdorf
+			move $a0, $v0 #$v0, and now $a0, contains the word that needs to be transferred.
+			li $a1, 0x10040000 #location of found list that needs to be appended to.
+			jal horfdorf
+			
+			#increment timer by 10 and decrement the number of solutions remaining by one.
+			lw $t0, timer($0)
+			addiu $t0, $t0, 10
+			sw $t0, timer($0)
+			lw $t0, solutionsRemaining
+			addiu $t0, $t0, -1
+			sw $t0, solutionsRemaining
+			j exitParse
+		shuffleIt:
+			la $v0, puzzle
+			jal shuffle
+			j exitParse
+		exitParse: #clears the buffer and allows for writing into the buffer again
+			li $t0, 1
+			li $t1, 10
+			exitParseLoop:
+				sb $0, inputBuffer($t0)
+				addiu $t0, $t0, 1
+				beq, $t0, $t1, exitParseLoop
+			sb $0, inputBuffer($0)
+			j GamePlayLoop
+	exitGamePlayLoop:
+		lw $ra ($sp)
+		addiu $sp, $sp, 4
+		jr $ra
 
 #Loads the dictionary into a specified address, selects a random word, jumbles it, and returns the starting address of the word. 
 #arguments: a0=address to start loading the dictionary. returns $v0, the address of the selected (and jumbled)word. 
@@ -686,7 +739,7 @@ horfdorf:
 			lb $t0 ($a0)
 			beq $t0, $t2, endhorf # exits copy when the loop hits the newline in the original string.
 			sb $t0, ($a1)
-			#sb $0, ($a0)
+			sb $0, ($a0)
 			addiu $a0, $a0, 1
 			addiu $a1, $a1, 1
 			j realcopy
