@@ -5,19 +5,21 @@
 .ktext 0x80000180 #this lets you code in the interrupt section!
 #need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
 #Kernel instructions are only called under two conditions:
-#	1.Keypress
-#	2.Clock interrupt (thrown every second when clock interrupt bit is set to one.)
+#	1.Keypress (exception code 0)
+#	2.Clock interrupt (thrown every second when clock interrupt bit is set to one.) 
+#         (Exception code 13)
 #Both of these interrupts are thrown through the KeyboardandDisplayEmulator class. 
 #saved registers are reserved for kernel data.
-mfc0 $a1, $13 # $13 is cause register
-srl $a1, $a1, 2
-andi $a1, $a1, 31 # $a0=exception code
-beq $a1, $0, keyboardInterrupt
+
+mfc0 $s1, $13 # $13 is cause register
+srl $s1, $s1, 2
+andi $s1, $s1, 31 # $a0=exception code
+beq $s1, $0, keyboardInterrupt #Clock interrupt is not 0, and that is all we care about.
 
 clockInterrupt:
-li $a1, timer
-subi $a1, $a1, 1
-sw $a1, timer
+	li $s1, timer
+	subi $s1, $s1, 1
+	sw $s1, timer
 
 keyboardInterrupt:
 	#checkIndexBuffer
@@ -192,7 +194,8 @@ strcpr:#takes arguments a0=the address of the first string, a1=the address of th
 		lb $t0, ($a0)
 		lb $t1, ($a1)
 		bne $t1, $t0, strcprfalse
-		beq $t1, $t2, strcprtrue #if t1 is equal to \n and we know t1 and t0 are equal, then we can conclude that we have reached the end of the strings and that the strings are equal. note that in order for this function to work, both strings must be \n-terminated.
+		beq $t1, $t2, strcprtrue #if t1 is equal to \n and we know t1 and t0 are equal, then we can conclude that we have reached the end of the strings and that the strings are equal. 
+					 #note that in order for this function to work, both strings must be \n-terminated.
 		addiu $a0, $a0, 1
 		addiu $a1, $a1, 1
 		j strcprloop
@@ -285,63 +288,7 @@ shuffle: # $v0 is address of word to jumble
 	lw $ra, ($sp) # reloads return address
 	addiu $sp, $sp, 4
 	jr $ra
-
-drawgrid: # prints 3x3 grid of the word at the address stored in $v0
-	move $t0, $v0 #moves address of selected jumbled word to $t0
-	li $v0, 11
-	lb  $a0, 1($t0) #prints first character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 2($t0) #prints second character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 3($t0) #prints third character
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	lb $a0, 4($t0) # prints fourth character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 0($t0) # prints middle character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 5($t0) # prints sixth character
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	lb $a0, 6($t0) # prints seventh character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 7($t0) # prints eighth character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 8($t0) # prints ninth character
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	move $v0, $t0	#puts address of word back into $v0
-	jr $ra
 	
-#drawclock:
-	#sw 0xfff000c, timeVal
-	
-#drawwordlist: #if \n character, print comma #if print more than 80 characters, new line # words list not added #t0 is iterator
-	
-	#loop:
-		#addi $t0, 0x00000001
-		
-		#beq $0, drawwordlistend
-		#j loop
-	#drawwordlistend:
-		#jr $ra
 #Finds all words in the dictionary that contain the central letter		
 #arguments: $v0=address of puzzle string
 getplausiblewords:
@@ -373,6 +320,8 @@ getplausiblewords:
 	end:
 		jr $ra
 
+#Creates a \f-terminated string containing the solution to the given puzzle
+#Arguments: $v0=address of puzzle string
 createsolutionsstring:
 	move $a0, $v0 # puts address of string into $a0
 	move $t0, $0 # resets counter for number of characters in possible solution string
@@ -418,7 +367,9 @@ createsolutionsstring:
 		move $v0, $a0 # restores address of jumbled word to $v0
 		jr $ra
 
-combochecker:#Determines whether the characters in one \n-terminated string are a subset of the characters in another. arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset 	
+#Determines whether the characters in one \n-terminated string are a subset of the characters in another. 
+#Arguments: a0=address of first string. a1=address of subset(?). returns v0=1 if a1 is a subset
+combochecker: 	
 	addiu $sp, $sp, -24
 	sw $t0, ($sp)
 	sw $t1, 4($sp)
@@ -493,7 +444,7 @@ checkanswo:
 			beq $t0, $t2, loopeagain
 			beq $t0, $t1, loopeagain #if the character at $a1 is an \n or \r, then we're ready to read a word.
 			j findnextword	
-			loopeagain	
+			loopeagain:	
 				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
 				lb $t0, ($a1)
 				beq $t0, $t2, searchnegative	#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n,
@@ -586,5 +537,91 @@ userInputSection:
 #time for all the input stuff
 
 findsolutions:
+#when the user enters a valid solution to the puzzle, this happens. 
+#Arguments: a0=the address of the word in the solution list that needs to be moved. a1= address of \f-terminated found solutions list to append to.
+horfdorf:
+	addiu $sp, $sp, -20	
+	sw $t0, ($sp)
+	sw $t1, 4($sp)
+	sw $t2, 8($sp)
+	sw $a0, 12($sp)
+	sw $a1, 16($sp)
 
-horfdorf:#when the user enters a valid solution to the puzzle, this happens. arguments: a0=the address of the word in the solution list that needs to be moved. 
+	li $t1, 13 # form feed character for reference
+	li $t2, 10 #newline character, for reference	
+	findendofsolutions:
+		lb $t0, ($a1)
+		beq $t0, $t1, copy 
+		addiu $a1, $a1, 1
+		j findendofsolutions
+	copy: #the address to the end of the solutions list is now in #a1
+		li $t0, 44 #add a comma	
+		sb $t0, ($a1)
+		li $t0, 32 #add a space 
+		sb $t0, 1($a1)
+		addiu $a1, $a1, 2 #the string is now formatted and ready to append to. :3
+		realcopy:
+			lb $t0 ($a0)
+			beq $t0, $t2, endhorf # exits copy when the loop hits the newline in the original string.
+			sb $t0, ($a1)
+			sb $0, ($a0)
+			addiu $a0, $a0, 1
+			addiu $a1, $a1, 1
+			j realcopy
+	endhorf:
+		sb $t1, 1($a1) #terminate the solutions list with a \f
+		li $t0, 12 #carriage return
+		sb $t0, ($a0) #change the \n in the original string to a carriage return to make victory condition easier to determine
+		
+		lw $t0, ($sp)
+		lw $t1, 4($sp)
+		lw $t2, 8($sp)
+		lw $a0, 12($sp)
+		lw $a1, 16($sp)	
+		addiu $sp, $sp, 20
+		jr $ra
+#Debug subroutines:
+#drawgrid: # prints 3x3 grid of the word at the address stored in $v0
+#	move $t0, $v0 #moves address of selected jumbled word to $t0
+#	li $v0, 11
+#	lb  $a0, 1($t0) #prints first character
+#	syscall
+#	addi $a0, $0, 0x00000020 # prints a space
+#	syscall
+#	lb $a0, 2($t0) #prints second character
+#	syscall
+#	addi $a0, $0, 0x00000020 # prints a space
+#	syscall
+#	lb $a0, 3($t0) #prints third character
+#	syscall
+#	addi $a0, $0, 0x0000000A # prints new line
+#	syscall
+#	lb $a0, 4($t0) # prints fourth character
+#	syscall
+#	addi $a0, $0, 0x00000020 # prints a space
+#	syscall
+#	lb $a0, 0($t0) # prints middle character
+#	syscall
+#	addi $a0, $0, 0x00000020 # prints a space
+#	syscall
+#	lb $a0, 5($t0) # prints sixth character
+#	syscall
+#	addi $a0, $0, 0x0000000A # prints new line
+#	syscall
+#	lb $a0, 6($t0) # prints seventh character
+#	syscall
+#	addi $a0, $0, 0x00000020 # prints a space
+#	syscall
+#	lb $a0, 7($t0) # prints eighth character
+#	syscall
+#	addi $a0, $0, 0x00000020 # prints a space
+#	syscall
+#	lb $a0, 8($t0) # prints ninth character
+#	syscall
+#	addi $a0, $0, 0x0000000A # prints new line
+#	syscall
+#	addi $a0, $0, 0x0000000A # prints new line
+#	syscall
+#	move $v0, $t0	#puts address of word back into $v0
+#	jr $ra
+
