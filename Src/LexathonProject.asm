@@ -56,7 +56,7 @@ inputBuffer: .byte 0,0,'A','C','E','R','T','V','B','G','Y'
 timer: .word 100
 lost: .asciiz "\nYou lost lolol"
 winrar: .asciiz "like a baws"
-answerCount: .word 0
+solutionsremaining: .word 0
 
 .text
 startInput:
@@ -87,8 +87,8 @@ main:
 	syscall
 	li $v0, 10
 	syscall
-
-clockLoop:
+#Gameplay loop loops while the user is playing.
+GamePlayLoop:
 	la $a3, timer($0)
 	beqz $a3, lostCondition
 	#jal drawgui
@@ -106,20 +106,6 @@ wonCondition:
 	la $a0, winrar
 	li $v0, 10
 	syscall
-
-checkToFindAnswerCount:
-	#loop through array of characters, when letter=13, add 1
-	lb $a0, answerCount
-	li $a2, 10
-	li $t1, 0
-	answerCounter:
-	lb $a1, answerCount($t1)
-	bne $a1, $a2, ansCtr
-	addi $a0, $a0, 1
-	ansCtr:
-	addi $t1, $t1, 1
-	beqz $a1, wonCondition
-	j answerCounter
 
 checkInput:
 
@@ -547,7 +533,7 @@ horfdorf:
 	sw $a0, 12($sp)
 	sw $a1, 16($sp)
 
-	li $t1, 13 # form feed character for reference
+	li $t1, 12 # form feed character for reference
 	li $t2, 10 #newline character, for reference	
 	findendofsolutions:
 		lb $t0, ($a1)
@@ -564,14 +550,14 @@ horfdorf:
 			lb $t0 ($a0)
 			beq $t0, $t2, endhorf # exits copy when the loop hits the newline in the original string.
 			sb $t0, ($a1)
-			sb $0, ($a0)
+			#sb $0, ($a0)
 			addiu $a0, $a0, 1
 			addiu $a1, $a1, 1
 			j realcopy
 	endhorf:
 		sb $t1, 1($a1) #terminate the solutions list with a \f
-		li $t0, 12 #carriage return
-		sb $t0, ($a0) #change the \n in the original string to a carriage return to make victory condition easier to determine
+		#li $t0, 13 #carriage return
+		#sb $t0, ($a0) #change the \n in the original string to a carriage return to make victory condition easier to determine
 		
 		lw $t0, ($sp)
 		lw $t1, 4($sp)
