@@ -28,8 +28,8 @@ keyboardInterrupt:
 
 loadChar:
 	lbu $k0, 0xffff0004 #loads the character typed into the keyboard
-	addi $s7, $0, 13 #loads enter
-	beq $k0, $s7, compareByEnter
+	addi $s6, $0, 13 #loads enter
+	beq $k0, $s6, compareByEnter
 
 addCharIntoBuffer:
 	#checkIndexBuffer Location
