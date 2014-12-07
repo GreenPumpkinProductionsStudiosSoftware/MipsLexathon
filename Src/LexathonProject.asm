@@ -31,7 +31,7 @@ keyboardInterrupt:
 	#checkIndexBuffer
 	#set t5 to a number that stores the first byte of the inputBuffer
 	lb $s5, inputBuffer($0)
-	li $t0, 8
+	li $s0, 8
 	beq $s5, $s0, backspace
 	beq $s5, $0, loadChar
 	j ExitKernel
@@ -225,7 +225,15 @@ main:
 	move $a0, $v0
 	addi $a1, $0, 0x1005a000 # loads dictionary into 0x1005a000
 	jal readfile
-
+	
+	move $v0, $t0
+	jal getplausiblewords
+	jal createsolutionsstring
+	
+	jal GamePlay
+	
+	li $v0, 10
+	syscall
 #Gameplay loop loops while the user is playing.
 GamePlay:
 	addiu $sp, $sp, -4
