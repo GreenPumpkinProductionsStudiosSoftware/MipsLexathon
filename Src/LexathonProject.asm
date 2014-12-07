@@ -1,6 +1,42 @@
 # lexdict9 is loaded at 0x10040000, lexdict is loaded at 0x1005a000, the plausible words list is loaded at 0x100bad20
 #solutions list is loaded at 0x10110000, solution to compare loaded at 0x10058d00
 
+#KERNEL DATA#####################################################################################################################
+.ktext 0x80000180 #this lets you code in the interrupt section!
+#need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
+#Kernel instructions are only called under two conditions:
+#	1.Keypress
+#	2.Clock interrupt (thrown every second when clock interrupt bit is set to one.)
+#Both of these interrupts are thrown through the KeyboardandDisplayEmulator class. 
+#saved registers are reserved for kernel data.
+keyboardInterrupt:
+	#checkIndexBuffer
+	#set t5 to a number that stores the first byte of the inputBuffer
+	lb $t5, inputBuffer($0)
+	beq $t5, $0, loadChar
+	eret
+
+loadChar:
+	lbu $k0, 0xffff0004 #loads the character typed into the keyboard
+	addi $s7, $0, 13 #loads enter
+	beq $k0, $s7, compareByEnter
+
+addCharIntoBuffer:
+	#checkIndexBuffer Location
+	addi $t5, $0, 1
+	lb $k1, inputBuffer($t5)
+	addi, $k1, $k1, 3
+	#write
+	sb $k0, inputBuffer($k1)
+	eret #returns to the program
+
+compareByEnter:
+	#set read byte to 1
+	addi $k1, $0, 1
+	sb $k1, inputBuffer($0)
+	eret
+#END KERNEL DATA :3##############################################################################################################
+
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
@@ -232,9 +268,11 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 shuffle: # $v0 is address of word to jumble
 	addiu $sp, $sp, -4 # store $ra in the stack
 	sw $ra, ($sp)
+
 	move $a0, $v0  # sets $a0 to address of word to jumble
 	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
 	jal jumble	# jumbles word
+	
 	lw $ra, ($sp) # reloads return address
 	addiu $sp, $sp, 4
 	jr $ra
@@ -537,41 +575,6 @@ drawgui: #prints grid display
 
 userInputSection:
 #time for all the input stuff
-
-.ktext 0x80000180 #this lets you code in the interrupt section!
-#need to make it so this branches dependent on whether the interrupt was caused by the keyboard or the timer or the display.
-li $v0, 1
-li $a0, 5
-syscall
-eret
-
-keyboardInterrupt:
-	#checkIndexBuffer
-	#set t5 to a number that stores the first byte of the inputBuffer
-	lb $t5, inputBuffer($0)
-	beq $t5, $0, loadChar
-	eret
-
-loadChar:
-	lbu $k0, 0xffff0004 #loads the character typed into the keyboard
-	addi $s7, $0, 13 #loads enter
-	beq $k0, $s7, compareByEnter
-
-addCharIntoBuffer:
-	#checkIndexBuffer Location
-	addi $t5, $0, 1
-	lb $k1, inputBuffer($t5)
-	addi, $k1, $k1, 3
-	#write
-	sb $k0, inputBuffer($k1)
-	eret #returns to the program
-
-compareByEnter:
-	#set read byte to 1
-	addi $k1, $0, 1
-	sb $k1, inputBuffer($0)
-	eret
-
 
 findsolutions:
 
