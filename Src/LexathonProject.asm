@@ -22,16 +22,27 @@ andi $s1, $s1, 31 # $a0=exception code
 beq $s1, $0, keyboardInterrupt #Clock interrupt is not 0, and that is all we care about.
 
 clockInterrupt:
+	addiu $sp, $sp, -4
+	sw $s1, ($sp)
+
 	la $s1, timer
 	subi $s1, $s1, 1
 	sw $s1, timer
+	
+	lw $s1, ($sp)
+	addiu $sp, $sp, 4
 	j ExitKernel
 
 keyboardInterrupt:
+	addiu $sp, $sp, -16
+	sw $s1, ($sp)
+	sw $s4, 4($sp)
+	sw $s5, 8($sp)
+	sw $s6, 12($sp)
 	#checkIndexBuffer
 	#set t5 to a number that stores the first byte of the inputBuffer
 	lb $s5, inputBuffer($0)
-	li $t0, 8
+	li $s1, 8
 	beq $s5, $s0, backspace
 	beq $s5, $0, loadChar
 	j ExitKernel
@@ -42,8 +53,8 @@ keyboardInterrupt:
 
 	addCharIntoBuffer:
 		#checkIndexBuffer Location
-		addi $t5, $0, 1
-		lb $k1, inputBuffer($t5)
+		addi $s4, $0, 1
+		lb $k1, inputBuffer($s4)
 		addi, $k1, $k1, 2
 		#write
 		sb $k0, inputBuffer($k1)
@@ -62,10 +73,19 @@ keyboardInterrupt:
 		addi $s0, $s0, 2
 		sb $0, inputBuffer($s0)
 		j ExitKernel
-
+	lw $s1, ($sp)
+	lw $s4, 4($sp)
+	lw $s5, 8($sp)
+	lw $s6, 12($sp)
+	addiu $sp, $sp, 16
 
 #converts the the value in timer into a string that can be used for printing.
 getTimeString: #put into t4 the seconds, gets each number and makes a string
+	addiu $sp, $sp, -16
+	sw $s1, ($sp)
+	sw $s4, 4($sp)
+	sw $s5, 8($sp)
+	sw $s6, 12($sp)
 	la $s4, timer
 	li $s5, 10
 	li $s6, 2
@@ -73,8 +93,8 @@ getTimeString: #put into t4 the seconds, gets each number and makes a string
 	mfhi $s5
 	addi $s5, $s5, 48
 	sb $s5, timeString($s6)
-	li $s7, 10
-	div $s5, $s7
+	li $s6, 10
+	div $s5, $s6
 	mflo $s4
 	mfhi $s5
 	addi $s4, $s4, 48
@@ -82,9 +102,19 @@ getTimeString: #put into t4 the seconds, gets each number and makes a string
 	sb $s4, timeString($0)
 	li $s4, 1
 	sb $s5, timeString($s4)
+	sw $s1, ($sp)
+	lw $s4, 4($sp)
+	lw $s5, 8($sp)
+	lw $s6, 12($sp)
+	addiu $sp, $sp, 16
 	jr $ra
 	
 getWordString: #put into t4 the seconds, gets each number and makes a string
+	addiu $sp, $sp, -16
+	sw $s1, ($sp)
+	sw $s4, 4($sp)
+	sw $s5, 8($sp)
+	sw $s6, 12($sp)
 	la $s4, solutionsRemaining
 	li $s5, 10
 	li $s6, 2
@@ -92,8 +122,8 @@ getWordString: #put into t4 the seconds, gets each number and makes a string
 	mfhi $s5
 	addi $s5, $s5, 48
 	sb $s5, wordsRemaining($s6)
-	li $s7, 10
-	div $s5, $s7
+	li $s6, 10
+	div $s5, $s6
 	mflo $s4
 	mfhi $s5
 	addi $s4, $s4, 48
@@ -101,9 +131,17 @@ getWordString: #put into t4 the seconds, gets each number and makes a string
 	sb $s4, wordsRemaining($0)
 	li $s4, 1
 	sb $s5, wordsRemaining($s4)
+	lw $s4, ($sp)
+	lw $s4, 4($sp)
+	lw $s5, 8($sp)
+	lw $s6, 12($sp)
+	addiu $sp, $sp, 16
 	jr $ra
 
 Display:
+	addiu $sp, $sp, -8
+	sw $s1, ($sp)
+	sw $a0, 4($sp)
 	li $a0, 13
 	sb $s1, 0xFFFF000C
 	la $a0, timeString
@@ -114,7 +152,10 @@ Display:
 	jal printFF
 	la $a0, 0x10040000
 	jal printFF
-	j ExitKernel 
+	lw $s1, ($sp)
+	lw $a0, 4($sp)
+	addiu $sp, $sp, 8
+	j ExitKernel
 
 #print a \f terminated string.
 #arguments: a0= starting address of string to print.
@@ -145,6 +186,11 @@ printFF:
 		jr 	$ra
 		
 drawgrid: # prints 3x3 grid of the word at the address stored in $v0
+	addiu $sp, $sp, -16
+	sw $s1, ($sp)
+	sw $t0, 4($sp)
+	sw $v0, 8($sp)
+	sw $a0, 12($sp)
 	move $t0, $v0 #moves address of selected jumbled word to $t0
 	lw $t0, puzzle
 	li $v0, 11
@@ -185,12 +231,18 @@ drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 	addi $a0, $0, 0x0000000A # prints new line
 	sb $s1, 0xFFFF000C
 	move $v0, $t0	#puts address of word back into $v0
+	lw $s1, ($sp)
+	lw $t0, 4($sp)
+	lw $v0, 8($sp)
+	lw $a0, 12($sp)
+	addiu $sp, $sp, 16	
 	jr $ra
 		
 ExitKernel:
 	lw $ra ($sp)
 	lw $a0 4($sp)
-	lw $a1 8($sp)	addiu $sp, $sp, 12
+	lw $a1 8($sp)	
+	addiu $sp, $sp, 12
 	eret
 #END KERNEL DATA :3##############################################################################################################
 
