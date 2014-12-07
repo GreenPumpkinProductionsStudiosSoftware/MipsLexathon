@@ -9,6 +9,16 @@
 #	2.Clock interrupt (thrown every second when clock interrupt bit is set to one.)
 #Both of these interrupts are thrown through the KeyboardandDisplayEmulator class. 
 #saved registers are reserved for kernel data.
+mfc0 $a1, $13 # $13 is cause register
+srl $a1, $a1, 2
+andi $a1, $a1, 31 # $a0=exception code
+beq $a1, $0, keyboardInterrupt
+
+clockInterrupt:
+li $a1, timer
+subi $a1, $a1, 1
+sw $a1, timer
+
 keyboardInterrupt:
 	#checkIndexBuffer
 	#set t5 to a number that stores the first byte of the inputBuffer
