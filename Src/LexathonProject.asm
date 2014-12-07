@@ -162,6 +162,7 @@ Display:
 	sw $a0, 4($sp)
 	li $a0, 13
 	sb $s1, 0xFFFF000C
+	jal getTimeString
 	la $a0, timeString
 	jal printN
 	li $a0, 10
@@ -297,7 +298,7 @@ lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 0,0,0,0,0,0,0,0,0
-timer: .word 100
+timer: .word 500
 wordsRemaining: .asciiz "000 words remaining\n"
 solutionsRemaining: .word 0
 timeString: .asciiz "000 seconds\n"
