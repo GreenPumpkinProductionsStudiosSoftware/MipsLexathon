@@ -45,6 +45,11 @@ keyboardInterrupt:
 	li $s1, 8
 	beq $s5, $s0, backspace
 	beq $s5, $0, loadChar
+	lw $s1, ($sp)
+	lw $s4, 4($sp)
+	lw $s5, 8($sp)
+	lw $s6, 12($sp)
+	addiu $sp, $sp, 16
 	j ExitKernel
 	loadChar:
 		lbu $k0, 0xffff0004 #loads the character typed into the keyboard
@@ -58,13 +63,24 @@ keyboardInterrupt:
 		addi, $k1, $k1, 2
 		#write
 		sb $k0, inputBuffer($k1)
+		lw $s1, ($sp)
+		lw $s4, 4($sp)
+		lw $s5, 8($sp)
+		lw $s6, 12($sp)
+		addiu $sp, $sp, 16
 		j ExitKernel #returns to the program
 
 	compareByEnter:
 		#set read byte to 1
 		addi $k1, $0, 1
 		sb $k1, inputBuffer($0)
+		lw $s1, ($sp)
+		lw $s4, 4($sp)
+		lw $s5, 8($sp)
+		lw $s6, 12($sp)
+		addiu $sp, $sp, 16
 		j ExitKernel
+		
 	backspace:
 		move $s0, $0	
 		addiu $s0, $s0, 1
@@ -72,12 +88,12 @@ keyboardInterrupt:
 		beq $s0, $0, ExitKernel #exits if index is 0, meaning that there are no characters to delete	
 		addi $s0, $s0, 2
 		sb $0, inputBuffer($s0)
+		lw $s1, ($sp)
+		lw $s4, 4($sp)
+		lw $s5, 8($sp)
+		lw $s6, 12($sp)
+		addiu $sp, $sp, 16
 		j ExitKernel
-	lw $s1, ($sp)
-	lw $s4, 4($sp)
-	lw $s5, 8($sp)
-	lw $s6, 12($sp)
-	addiu $sp, $sp, 16
 
 #converts the the value in timer into a string that can be used for printing.
 getTimeString: #put into t4 the seconds, gets each number and makes a string
