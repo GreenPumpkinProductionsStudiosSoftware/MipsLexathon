@@ -1,5 +1,6 @@
 # lexdict9 is loaded at 0x10040000, lexdict is loaded at 0x1005a000, the plausible words list is loaded at 0x100bad20
 #solutions list is loaded at 0x10110000, solution to compare loaded at 0x10058d00
+#foundWords is at 0x10040000
 
 #KERNEL DATA#####################################################################################################################
 .ktext 0x80000180 #this lets you code in the interrupt section!
@@ -68,36 +69,110 @@ getTimeString: #put into t4 the seconds, gets each number and makes a string
 	li $t4, 1
 	sb $t5, timeString($t4)
 	jr $ra
+	
+getWordString: #put into t4 the seconds, gets each number and makes a string
+	la $t4, solutionsRemaining
+	li $t5, 10
+	li $t6, 2
+	div $t4, $t5
+	mfhi $t5
+	addi $t5, $t5, 48
+	sb $t5, wordsRemaining($t6)
+	li $t7, 10
+	div $t5, $t7
+	mflo $t4
+	mfhi $t5
+	addi $t4, $t4, 48
+	addi $t5, $t5, 48
+	sb $t4, wordsRemaining($0)
+	li $t4, 1
+	sb $t5, wordsRemaining($t4)
+	jr $ra
 
 Display:
+li $a0, 13
+sb $s1, 0xFFFF000C
+la $a0, timeString
+jal printFF
+jal drawgrid
+jal getWordString
+la $a0, wordsRemaining
+jal printFF
+la $a0, 0x10040000
+jal printFF
+j ExitKernel 
 
 #print a \f terminated string.
 #arguments: a0= starting address of string to print.
 printFF:
-	addiu $sp, $sp, -16	
+	addiu $sp, $sp, -16
 	sw $s0, ($sp)
 	sw $s1, 4($sp)
-	sw $s9, 8($sp)
+	sw $s2, 8($sp)
 	sw $a0, 12($sp)
 
 	#Decimal Value 12 = \f
-	li 	$s9, 12
-	la 	$s0, $a0 
-
+	li 	$s2, 12
+	la 	$s0, ($a0)
+	
 	outputCycle:
 		lb	$s1, ($s0)
-		beq	$s1, $s9, return
+		beq	$s1, $s2, return
 		sb	$s1, 0xFFFF000C
 		addi	$s0, $s0, 1
-			j	outputCycle
+		j outputCycle
 			
 	return:
 		lw $s0, ($sp)
 		lw $s1, 4($sp)
-		lw $s9, 8($sp)
+		lw $s2, 8($sp)
 		lw $a0, 12($sp)
 		addiu $sp, $sp, 16	
 		jr 	$ra
+		
+drawgrid: # prints 3x3 grid of the word at the address stored in $v0
+	move $t0, $v0 #moves address of selected jumbled word to $t0
+	lw $t0, puzzle
+	li $v0, 11
+	lb  $a0, 1($t0) #prints first character
+	sb  $s1, 0xFFFF000C
+	addi $a0, $0, 0x00000020 # prints a space
+	sb $s1, 0xFFFF000C
+	lb $a0, 2($t0) #prints second character
+	sb $s1, 0xFFFF000C
+	addi $a0, $0, 0x00000020 # prints a space
+	sb $s1, 0xFFFF000C
+	lb $a0, 3($t0) #prints third character
+	sb $s1, 0xFFFF000C
+	addi $a0, $0, 0x0000000A # prints new line
+	sb $s1, 0xFFFF000C
+	lb $a0, 4($t0) # prints fourth character
+	sb $s1, 0xFFFF000C
+	addi $a0, $0, 0x00000020 # prints a space
+	sb $s1, 0xFFFF000C
+	lb $a0, 0($t0) # prints middle character
+	sb $s1, 0xFFFF000C
+	addi $a0, $0, 0x00000020 # prints a space
+	sb $s1, 0xFFFF000C
+	lb $a0, 5($t0) # prints sixth character
+	sb $s1, 0xFFFF000C
+	addi $a0, $0, 0x0000000A # prints new line
+	sb $s1, 0xFFFF000C
+	lb $a0, 6($t0) # prints seventh character
+	sb $s1, 0xFFFF000C
+	addi $a0, $0, 0x00000020 # prints a space
+	sb $s1, 0xFFFF000C
+	lb $a0, 7($t0) # prints eighth character
+	sb $s1, 0xFFFF000C
+	addi $a0, $0, 0x00000020 # prints a space
+	sb $s1, 0xFFFF000C
+	lb $a0, 8($t0) # prints ninth character
+	sb $s1, 0xFFFF000C
+	addi $a0, $0, 0x0000000A # prints new line
+	sb $s1, 0xFFFF000C
+	move $v0, $t0	#puts address of word back into $v0
+	jr $ra
+		
 ExitKernel:
 	lw $ra ($sp)
 	addiu $sp, $sp, 4
@@ -107,10 +182,10 @@ ExitKernel:
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
-inputBuffer: .byte 0,0,'A','C','E','R','T','V','B','G','Y'
+inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
+puzzle: .byte 0,0,0,0,0,0,0,0,0
 timer: .word 100
-lost: .asciiz "\nYou lost lolol"
-winrar: .asciiz "like a baws"
+wordsRemaining: .asciiz "000 words remaining"
 solutionsRemaining: .word 0
 timeString: .asciiz "000 seconds"
 
@@ -140,7 +215,7 @@ GamePlayLoop:
 	la $a3, timer($0)
 	beqz $a3, lostCondition
 	#jal drawgui
-	j clockLoop
+	j GamePlayLoop
 
 lostCondition:
 	li $v0, 4
@@ -668,49 +743,4 @@ horfdorfprint: #$a0 = address of string to edit
 		j locatenextcomma
 	enddorf:
 		jr $ra
-#Debug subroutines:
-#drawgrid: # prints 3x3 grid of the word at the address stored in $v0
-#	move $t0, $v0 #moves address of selected jumbled word to $t0
-#	li $v0, 11
-#	lb  $a0, 1($t0) #prints first character
-#	syscall
-#	addi $a0, $0, 0x00000020 # prints a space
-#	syscall
-#	lb $a0, 2($t0) #prints second character
-#	syscall
-#	addi $a0, $0, 0x00000020 # prints a space
-#	syscall
-#	lb $a0, 3($t0) #prints third character
-#	syscall
-#	addi $a0, $0, 0x0000000A # prints new line
-#	syscall
-#	lb $a0, 4($t0) # prints fourth character
-#	syscall
-#	addi $a0, $0, 0x00000020 # prints a space
-#	syscall
-#	lb $a0, 0($t0) # prints middle character
-#	syscall
-#	addi $a0, $0, 0x00000020 # prints a space
-#	syscall
-#	lb $a0, 5($t0) # prints sixth character
-#	syscall
-#	addi $a0, $0, 0x0000000A # prints new line
-#	syscall
-#	lb $a0, 6($t0) # prints seventh character
-#	syscall
-#	addi $a0, $0, 0x00000020 # prints a space
-#	syscall
-#	lb $a0, 7($t0) # prints eighth character
-#	syscall
-#	addi $a0, $0, 0x00000020 # prints a space
-#	syscall
-#	lb $a0, 8($t0) # prints ninth character
-#	syscall
-#	addi $a0, $0, 0x0000000A # prints new line
-#	syscall
-#	addi $a0, $0, 0x0000000A # prints new line
-#	syscall
-#	move $v0, $t0	#puts address of word back into $v0
-#	jr $ra
-
-
+		
