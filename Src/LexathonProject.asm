@@ -234,7 +234,6 @@ jumble:#jumbles a string. arguments: a0:address of string to jumble. a1:length o
 	sw $a1, 16($sp)
 	sw $v0, 20($sp)
 
-	#move $t0, $a0 #address now contained in t0. this will be used for reference.
 	move $t1, $a0 #address now also contained in t1.
 	addu $t0, $a0, $a1 #t0 now contains the final address in the string
 	addiu $a1, $a1, -1#alignment for starting the string with the 1st character instead of the 0th
@@ -333,7 +332,8 @@ drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 		#j loop
 	#drawwordlistend:
 		#jr $ra
-		
+#Finds all words in the dictionary that contain the central letter		
+#arguments: $v0=address of puzzle string
 getplausiblewords:
 	lb $t0, 0($v0) # loads letter to search for into $t0
 	li $t1, 0 # initializes register to count how many chars have been looked at since last new line
@@ -362,7 +362,6 @@ getplausiblewords:
 		j wordloop
 	end:
 		jr $ra
-
 
 createsolutionsstring:
 	move $a0, $v0 # puts address of string into $a0
