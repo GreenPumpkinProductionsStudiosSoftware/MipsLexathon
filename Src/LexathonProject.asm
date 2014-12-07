@@ -10,6 +10,8 @@
 #         (Exception code 13)
 #Both of these interrupts are thrown through the KeyboardandDisplayEmulator class. 
 #saved registers are reserved for kernel data.
+addiu $sp, $sp, -4
+sw $ra, ($sp)
 
 mfc0 $s1, $13 # $13 is cause register
 srl $s1, $s1, 2
@@ -17,7 +19,7 @@ andi $s1, $s1, 31 # $a0=exception code
 beq $s1, $0, keyboardInterrupt #Clock interrupt is not 0, and that is all we care about.
 
 clockInterrupt:
-	li $s1, timer
+	la $s1, timer
 	subi $s1, $s1, 1
 	sw $s1, timer
 
@@ -26,70 +28,53 @@ keyboardInterrupt:
 	#set t5 to a number that stores the first byte of the inputBuffer
 	lb $t5, inputBuffer($0)
 	beq $t5, $0, loadChar
-	eret
+	j ExitKernel
+	loadChar:
+		lbu $k0, 0xffff0004 #loads the character typed into the keyboard
+		addi $s6, $0, 13 #loads enter
+		beq $k0, $s6, compareByEnter
 
-loadChar:
-	lbu $k0, 0xffff0004 #loads the character typed into the keyboard
-	addi $s6, $0, 13 #loads enter
-	beq $k0, $s6, compareByEnter
+	addCharIntoBuffer:
+		#checkIndexBuffer Location
+		addi $t5, $0, 1
+		lb $k1, inputBuffer($t5)
+		addi, $k1, $k1, 3
+		#write
+		sb $k0, inputBuffer($k1)
+		eret #returns to the program
 
-addCharIntoBuffer:
-	#checkIndexBuffer Location
-	addi $t5, $0, 1
-	lb $k1, inputBuffer($t5)
-	addi, $k1, $k1, 3
-	#write
-	sb $k0, inputBuffer($k1)
-	eret #returns to the program
-
-compareByEnter:
-	#set read byte to 1
-	addi $k1, $0, 1
-	sb $k1, inputBuffer($0)
-	eret
-	
-horfdorfprint: #$a0 = address of string to edit
-	move $s0, $a0 # address of string
-	move $s1, $0 # counter for total number of characters in line
-	move $s3, $0 # counter for word length
-	move $s4, $0 # counter for 80 characters
-	addi $s5, $0, 0x00000050 #sets $s5 to 80
-	addi $s6, $0, 0x0000000a # set $s6 to new line character
-	locatenextcomma:
-		add $s2, $s1, $s0 # gets address of $s1 byte in $s0
-		lb $s2, ($s2) # loads byte into $s2
-		beq $s2, 0x0000002c, commafound # branches if a comma was found
-		beq $s2, 0x0000000c, enddorf # branches if end
-		addi $s1, $s1, 1 #$s1++
-		addi $s3, $s3, 1 #$s3++
-		addi $s4, $s4, 1 #$s4++
-		j locatenextcomma
-	commafound:
-		addi $s1, $s1, 1 # adds 1 to $s1
-		add $s2, $s1, $s0 # gets address of next character
-		lb $s2, ($s2)
-		beq $s2, 0x0000000a, newlinefound # branches if next character is a newline
-		subi $s1, $s1, 1 # subtracts one from $s1
-		bgt $s4, $s5, over80
-		addi $s1, $s1, 2 # moves $s1 to next character
-		move $s3, $0
-		j locatenextcomma
-	newlinefound:
-		addi $s1, $s1, 1 # moves $s1 to next character
-		move $s3, $0 # resets counter
-		move $s4, $0 # resets counter
-		j locatenextcomma
-	over80:
-		sub $s1, $s1, $s3 #reverts $s1 to before last word
-		add $s2, $s1, $s0 # gets address of space
-		sb $s6, ($s2) # changes space to new line character
-		addi $s1, $s1, 1 # moves $s1 forward to next character
-		move $s3, $0 # resets counter
-		move $s4, $0 # resets counter
-		j locatenextcomma
-	enddorf:
+	compareByEnter:
+		#set read byte to 1
+		addi $k1, $0, 1
+		sb $k1, inputBuffer($0)
 		eret
 
+#converts the the value in timer into a string that can be used for printing.
+getTimeString: #put into t4 the seconds, gets each number and makes a string
+	la $t4, timer
+	li $t5, 10
+	li $t6, 2
+	div $t4, $t5
+	mfhi $t5
+	addi $t5, $t5, 48
+	sb $t5, timeString($t6)
+	li $t7, 10
+	div $t5, $t7
+	mflo $t4
+	mfhi $t5
+	addi $t4, $t4, 48
+	addi $t5, $t5, 48
+	sb $t4, timeString($0)
+	li $t4, 1
+	sb $t5, timeString($t4)
+	jr $ra
+
+Display:
+	
+ExitKernel:
+	lw $ra ($sp)
+	addiu $sp, $sp, 4
+	eret
 #END KERNEL DATA :3##############################################################################################################
 
 .data
@@ -99,7 +84,7 @@ inputBuffer: .byte 0,0,'A','C','E','R','T','V','B','G','Y'
 timer: .word 100
 lost: .asciiz "\nYou lost lolol"
 winrar: .asciiz "like a baws"
-solutionsremaining: .word 0
+solutionsRemaining: .word 0
 timeString: .asciiz "000 seconds"
 
 
@@ -122,16 +107,7 @@ main:
 	move $a0, $v0
 	addi $a1, $0, 0x1005a000 # loads dictionary into 0x1005a000
 	jal readfile
-	
-	move $v0, $t0
-	jal drawgrid
-	jal getplausiblewords
-	jal createsolutionsstring
-	li $v0, 4
-	la $a0, 0x10110000
-	syscall
-	li $v0, 10
-	syscall
+
 #Gameplay loop loops while the user is playing.
 GamePlayLoop:
 	la $a3, timer($0)
@@ -571,12 +547,17 @@ findsolutions:
 #when the user enters a valid solution to the puzzle, this happens. 
 #Arguments: a0=the address of the word in the solution list that needs to be moved. a1= address of \f-terminated found solutions list to append to.
 horfdorf:
-	addiu $sp, $sp, -20	
+	addiu $sp, $sp, -40	
 	sw $t0, ($sp)
 	sw $t1, 4($sp)
 	sw $t2, 8($sp)
 	sw $a0, 12($sp)
 	sw $a1, 16($sp)
+	sw $t3, 20($sp)
+	sw $t4, 24($sp)
+	sw $t5, 28($sp)
+	sw $t6, 32($sp)
+	sw $ra, 36($sp)
 
 	li $t1, 12 # form feed character for reference
 	li $t2, 10 #newline character, for reference	
@@ -603,15 +584,63 @@ horfdorf:
 		sb $t1, 1($a1) #terminate the solutions list with a \f
 		#li $t0, 13 #carriage return
 		#sb $t0, ($a0) #change the \n in the original string to a carriage return to make victory condition easier to determine
-		
+		lw $a1, 16($sp)
+		jal horfdorfprint
+	
 		lw $t0, ($sp)
 		lw $t1, 4($sp)
-		lw $t2, 8($sp)
+		lw $t2, 8($sp)	
 		lw $a0, 12($sp)
 		lw $a1, 16($sp)	
-		addiu $sp, $sp, 20
+		lw $t3, 20($sp)
+		lw $t4, 24($sp)
+		lw $t5, 28($sp)
+		lw $t6, 32($sp)
+		lw $ra, 36($sp)
+		addiu $sp, $sp, 40
 		jr $ra
-	
+
+horfdorfprint: #$a0 = address of string to edit
+	move $t0, $a0 # address of string
+	move $t1, $0 # counter for total number of characters in line
+	move $t3, $0 # counter for word length
+	move $t4, $0 # counter for 80 characters
+	addi $t5, $0, 0x00000050 #sets $t5 to 80
+	addi $t6, $0, 0x0000000a # set $t6 to new line character
+	locatenextcomma:
+		add $t2, $t1, $t0 # gets address of $t1 byte in $t0
+		lb $t2, ($t2) # loads byte into $t2
+		beq $t2, 0x0000002c, commafound # branches if a comma was found
+		beq $t2, 0x0000000c, enddorf # branches if end
+		addi $t1, $t1, 1 #$t1++
+		addi $t3, $t3, 1 #$t3++
+		addi $t4, $t4, 1 #$t4++
+		j locatenextcomma
+	commafound:
+		addi $t1, $t1, 1 # adds 1 to $t1
+		add $t2, $t1, $t0 # gets address of next character
+		lb $t2, ($t2)
+		beq $t2, 0x0000000a, newlinefound # branches if next character is a newline
+		subi $t1, $t1, 1 # subtracts one from $t1
+		bgt $t4, $t5, over80
+		addi $t1, $t1, 2 # moves $t1 to next character
+		move $t3, $0
+		j locatenextcomma
+	newlinefound:
+		addi $t1, $t1, 1 # moves $t1 to next character
+		move $t3, $0 # resets counter
+		move $t4, $0 # resets counter
+		j locatenextcomma
+	over80:
+		sub $t1, $t1, $t3 #reverts $t1 to before last word
+		add $t2, $t1, $t0 # gets address of space
+		sb $t6, ($t2) # changes space to new line character
+		addi $t1, $t1, 1 # moves $t1 forward to next character
+		move $t3, $0 # resets counter
+		move $t4, $0 # resets counter
+		j locatenextcomma
+	enddorf:
+		jr $ra
 #Debug subroutines:
 #drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 #	move $t0, $v0 #moves address of selected jumbled word to $t0
@@ -657,24 +686,4 @@ horfdorf:
 #	move $v0, $t0	#puts address of word back into $v0
 #	jr $ra
 
-getTimeString: #put into t4 the seconds, gets each number and makes a string
-la $t4, timer
-li $t5, 10
-li $t6, 3
-div $t4, $t5
-mflo $t4
-mfhi $t5
-addi $t4, $t4, timeString($t6)
-sb $t7, 
-sb $t4, timeString($0)
-li $t7, 10
-div $t5, $t7
-mflo $t4
-mfhi $t5
-addi $t4, $t4, 48
-addi $t5, $t5, 48
-li $t7, 1
-sb $t4, timeString($t7)
-li $t4, 2
-sb $t5, timeString($t4)
-jr $ra
+
