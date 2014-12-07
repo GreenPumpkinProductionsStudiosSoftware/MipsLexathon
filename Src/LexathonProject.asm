@@ -57,6 +57,7 @@ timer: .word 100
 lost: .asciiz "\nYou lost lolol"
 winrar: .asciiz "like a baws"
 answerCount: .word 0
+timeString: .asciiz "000 seconds"
 
 .text
 startInput:
@@ -625,3 +626,24 @@ horfdorf:
 #	move $v0, $t0	#puts address of word back into $v0
 #	jr $ra
 
+getTimeString: #put into t4 the seconds, gets each number and makes a string
+la $t4, timer
+li $t5, 10
+li $t6, 3
+div $t4, $t5
+mflo $t4
+mfhi $t5
+addi $t4, $t4, timeString($t6)
+sb $t7, 
+sb $t4, timeString($0)
+li $t7, 10
+div $t5, $t7
+mflo $t4
+mfhi $t5
+addi $t4, $t4, 48
+addi $t5, $t5, 48
+li $t7, 1
+sb $t4, timeString($t7)
+li $t4, 2
+sb $t5, timeString($t4)
+jr $ra
