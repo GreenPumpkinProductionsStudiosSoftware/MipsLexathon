@@ -47,6 +47,49 @@ compareByEnter:
 	addi $k1, $0, 1
 	sb $k1, inputBuffer($0)
 	eret
+	
+horfdorfprint: #$a0 = address of string to edit
+	move $s0, $a0 # address of string
+	move $s1, $0 # counter for total number of characters in line
+	move $s3, $0 # counter for word length
+	move $s4, $0 # counter for 80 characters
+	addi $s5, $0, 0x00000050 #sets $s5 to 80
+	addi $s6, $0, 0x0000000a # set $s6 to new line character
+	locatenextcomma:
+		add $s2, $s1, $s0 # gets address of $s1 byte in $s0
+		lb $s2, ($s2) # loads byte into $s2
+		beq $s2, 0x0000002c, commafound # branches if a comma was found
+		beq $s2, 0x0000000c, enddorf # branches if end
+		addi $s1, $s1, 1 #$s1++
+		addi $s3, $s3, 1 #$s3++
+		addi $s4, $s4, 1 #$s4++
+		j locatenextcomma
+	commafound:
+		addi $s1, $s1, 1 # adds 1 to $s1
+		add $s2, $s1, $s0 # gets address of next character
+		lb $s2, ($s2)
+		beq $s2, 0x0000000a, newlinefound # branches if next character is a newline
+		subi $s1, $s1, 1 # subtracts one from $s1
+		bgt $s4, $s5, over80
+		addi $s1, $s1, 2 # moves $s1 to next character
+		move $s3, $0
+		j locatenextcomma
+	newlinefound:
+		addi $s1, $s1, 1 # moves $s1 to next character
+		move $s3, $0 # resets counter
+		move $s4, $0 # resets counter
+		j locatenextcomma
+	over80:
+		sub $s1, $s1, $s3 #reverts $s1 to before last word
+		add $s2, $s1, $s0 # gets address of space
+		sb $s6, ($s2) # changes space to new line character
+		addi $s1, $s1, 1 # moves $s1 forward to next character
+		move $s3, $0 # resets counter
+		move $s4, $0 # resets counter
+		j locatenextcomma
+	enddorf:
+		eret
+
 #END KERNEL DATA :3##############################################################################################################
 
 .data
@@ -580,6 +623,7 @@ horfdorf:
 		lw $a1, 16($sp)	
 		addiu $sp, $sp, 20
 		jr $ra
+	
 #Debug subroutines:
 #drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 #	move $t0, $v0 #moves address of selected jumbled word to $t0
