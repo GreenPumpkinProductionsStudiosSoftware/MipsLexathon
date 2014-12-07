@@ -271,6 +271,11 @@ eret
 keyboardInterrupt:
 #checkIndexBuffer
 #set t5 to a number that stores the first byte of the inputBuffer
+mfc0 $a1, $13 # $13 is cause register
+srl $a1, $a1, 2
+andi $a1, $a1, 31 # $a0=exception code
+beq $a1, $0, keyboardInterrupt
+
 lb $t5, inputBuffer($0)
 beq $t5, $0, loadChar
 eret
