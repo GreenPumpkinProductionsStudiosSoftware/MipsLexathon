@@ -184,7 +184,8 @@ shuffle: # $v0 is address of word to jumble
 	addiu $sp, $sp, -4 # store $ra in the stack
 	sw $ra, ($sp)
 	move $a0, $v0  # sets $a0 to address of word to jumble
-	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
+	add $a0, $a0, 1
+	addi $a1, $0, 8 # sets $a1 to 9, the length of the string
 	jal jumble	# jumbles word
 	lw $ra, ($sp) # reloads return address
 	addiu $sp, $sp, 4
