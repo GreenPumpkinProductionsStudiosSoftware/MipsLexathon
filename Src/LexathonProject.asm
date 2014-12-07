@@ -11,8 +11,10 @@
 #         (Exception code 13)
 #Both of these interrupts are thrown through the KeyboardandDisplayEmulator class. 
 #saved registers are reserved for kernel data.
-addiu $sp, $sp, -4
+addiu $sp, $sp, -12
 sw $ra, ($sp)
+sw $a0, 4($sp)
+sw $a1, 8($sp)
 
 mfc0 $s1, $13 # $13 is cause register
 srl $s1, $s1, 2
@@ -28,10 +30,10 @@ clockInterrupt:
 keyboardInterrupt:
 	#checkIndexBuffer
 	#set t5 to a number that stores the first byte of the inputBuffer
-	lb $t5, inputBuffer($0)
+	lb $s5, inputBuffer($0)
 	li $t0, 8
-	beq $t5, $t0, backspace
-	beq $t5, $0, loadChar
+	beq $s5, $s0, backspace
+	beq $s5, $0, loadChar
 	j ExitKernel
 	loadChar:
 		lbu $k0, 0xffff0004 #loads the character typed into the keyboard
@@ -42,7 +44,7 @@ keyboardInterrupt:
 		#checkIndexBuffer Location
 		addi $t5, $0, 1
 		lb $k1, inputBuffer($t5)
-		addi, $k1, $k1, 3
+		addi, $k1, $k1, 2
 		#write
 		sb $k0, inputBuffer($k1)
 		j ExitKernel #returns to the program
@@ -53,45 +55,52 @@ keyboardInterrupt:
 		sb $k1, inputBuffer($0)
 		j ExitKernel
 	backspace:
+		move $s0, $0	
+		addiu $s0, $s0, 1
+		lb $s0, inputBuffer($s0)
+		beq $s0, $0, ExitKernel #exits if index is 0, meaning that there are no characters to delete	
+		addi $s0, $s0, 2
+		sb $0, inputBuffer($s0)
+		j ExitKernel
 
 
 #converts the the value in timer into a string that can be used for printing.
 getTimeString: #put into t4 the seconds, gets each number and makes a string
-	la $t4, timer
-	li $t5, 10
-	li $t6, 2
-	div $t4, $t5
-	mfhi $t5
-	addi $t5, $t5, 48
-	sb $t5, timeString($t6)
-	li $t7, 10
-	div $t5, $t7
-	mflo $t4
-	mfhi $t5
-	addi $t4, $t4, 48
-	addi $t5, $t5, 48
-	sb $t4, timeString($0)
-	li $t4, 1
-	sb $t5, timeString($t4)
+	la $s4, timer
+	li $s5, 10
+	li $s6, 2
+	div $s4, $s5
+	mfhi $s5
+	addi $s5, $s5, 48
+	sb $s5, timeString($s6)
+	li $s7, 10
+	div $s5, $s7
+	mflo $s4
+	mfhi $s5
+	addi $s4, $s4, 48
+	addi $s5, $s5, 48
+	sb $s4, timeString($0)
+	li $s4, 1
+	sb $s5, timeString($s4)
 	jr $ra
 	
 getWordString: #put into t4 the seconds, gets each number and makes a string
-	la $t4, solutionsRemaining
-	li $t5, 10
-	li $t6, 2
-	div $t4, $t5
-	mfhi $t5
-	addi $t5, $t5, 48
-	sb $t5, wordsRemaining($t6)
-	li $t7, 10
-	div $t5, $t7
-	mflo $t4
-	mfhi $t5
-	addi $t4, $t4, 48
-	addi $t5, $t5, 48
-	sb $t4, wordsRemaining($0)
-	li $t4, 1
-	sb $t5, wordsRemaining($t4)
+	la $s4, solutionsRemaining
+	li $s5, 10
+	li $s6, 2
+	div $s4, $s5
+	mfhi $s5
+	addi $s5, $s5, 48
+	sb $s5, wordsRemaining($s6)
+	li $s7, 10
+	div $s5, $s7
+	mflo $s4
+	mfhi $s5
+	addi $s4, $s4, 48
+	addi $s5, $s5, 48
+	sb $s4, wordsRemaining($0)
+	li $s4, 1
+	sb $s5, wordsRemaining($s4)
 	jr $ra
 
 Display:
@@ -180,7 +189,8 @@ drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 		
 ExitKernel:
 	lw $ra ($sp)
-	addiu $sp, $sp, 4
+	lw $a0 4($sp)
+	lw $a1 8($sp)	addiu $sp, $sp, 12
 	eret
 #END KERNEL DATA :3##############################################################################################################
 
