@@ -17,7 +17,7 @@ andi $s1, $s1, 31 # $a0=exception code
 beq $s1, $0, keyboardInterrupt #Clock interrupt is not 0, and that is all we care about.
 
 clockInterrupt:
-	li $s1, timer
+	la $s1, timer
 	subi $s1, $s1, 1
 	sw $s1, timer
 
@@ -121,16 +121,6 @@ main:
 	move $a0, $v0
 	addi $a1, $0, 0x1005a000 # loads dictionary into 0x1005a000
 	jal readfile
-	
-	move $v0, $t0
-	jal drawgrid
-	jal getplausiblewords
-	jal createsolutionsstring
-	li $v0, 4
-	la $a0, 0x10110000
-	syscall
-	li $v0, 10
-	syscall
 
 clockLoop:
 	la $a3, timer($0)
@@ -673,21 +663,18 @@ horfdorf:
 getTimeString: #put into t4 the seconds, gets each number and makes a string
 la $t4, timer
 li $t5, 10
-li $t6, 3
+li $t6, 2
 div $t4, $t5
-mflo $t4
 mfhi $t5
-addi $t4, $t4, timeString($t6)
-sb $t7, 
-sb $t4, timeString($0)
+addi $t5, $t5, 48
+sb $t5, timeString($t6)
 li $t7, 10
 div $t5, $t7
 mflo $t4
 mfhi $t5
 addi $t4, $t4, 48
 addi $t5, $t5, 48
-li $t7, 1
-sb $t4, timeString($t7)
-li $t4, 2
+sb $t4, timeString($0)
+li $t4, 1
 sb $t5, timeString($t4)
 jr $ra
