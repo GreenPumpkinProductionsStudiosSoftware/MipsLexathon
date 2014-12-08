@@ -61,6 +61,8 @@ keyboardInterrupt:
 		sb $k0, inputBuffer($k1) #store keyboard byte into input buffer
 		subi $k1, $k1, 1
 		sb $k1, inputBuffer($s4) #store index+1 into index
+		li $s4, 1
+		lb $k1, inputBuffer($s4)#I'm not sure the purpose of this
 		li $s4, 8
 	
 		lw $s1, ($sp)
