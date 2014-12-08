@@ -23,6 +23,8 @@ srl $a0, $a0, 2
 andi $a0, $a0, 31
 #syscall
 
+bnez $s7, Display
+
 keyboardInterrupt:
 	li $s7, 0
 	addi $sp, $sp, -16
@@ -69,9 +71,7 @@ keyboardInterrupt:
 		j ExitKernel #returns to the program
 
 	compareByEnter:
-		lw $s1, timer
-		subi $s1, $s1, 1
-		sw $s1, timer
+		jal getTimeString
 		addi $s4, $0, 1
 		lb $k1, inputBuffer($s4)
 		addi, $k1, $k1, 2
@@ -107,59 +107,67 @@ keyboardInterrupt:
 
 #converts the the value in timer into a string that can be used for printing.
 getTimeString:
-				li $a0, 3
+				li $a0, 2
+				lb $t0, timer($a0)
+				beqz $t0, timerA
+				subi $t0, $t0, 1
+				sb $t0, timer($a0)
+				addi $t0, $t0, 48
+				sb $t0, timeString($a0)
+				jr $ra
+				timerA:
+				addi $t0, $t0, 9
+				sb $t0, timer($a0)
+				addi $t0, $t0, 48
+				sb $t0, timeString($a0)
+				li $a0, 1
 				lb $t0, timer($a0)
 				beqz $t0, timerB
 				subi $t0, $t0, 1
 				sb $t0, timer($a0)
+				addi $t0, $t0, 48
+				sb $t0, timeString($a0)
 				jr $ra
 				timerB:
-				addi $t0, $t0, 9
-				sb $t0, timer($a0)
-				li $a0, 2
-				lb $t0, solutionsRemaining($a0)
-				beqz $t0, solutionsPartC
-				subi $t0, $t0, 1
-				sb $t0, solutionsRemaining($a0)
-				jr $ra
-				timerC:
-				addi $t0, $t0, 9
-				sb $t0, timer($a0)
 				li $a0, 1
-				lb $t0, solutionsRemaining($a0)
-				beqz $t0, solutionsPartD
-				subi $t0, $t0, 1
-				sb $t0, solutionsRemaining($a0)
+				sb $a0, timer($0)
 				jr $ra
-				timerD:
-				li $a0, 1
-				sb $a0, solutionsRemaining($0)
-				jr $ra
-	
+				
+				
 getWordString: #put into t4 the seconds, gets each number and makes a string
 				li $a0, 3
 				lb $t0, solutionsRemaining($a0)
 				beqz $t0, solutionsB
 				subi $t0, $t0, 1
 				sb $t0, solutionsRemaining($a0)
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
 				jr $ra
 				solutionsB:
 				addi $t0, $t0, 9
-				sb $t0, timer($a0)
+				sb $t0, solutionsRemaining($a0)
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
 				li $a0, 2
 				lb $t0, solutionsRemaining($a0)
 				beqz $t0, solutionsC
 				subi $t0, $t0, 1
 				sb $t0, solutionsRemaining($a0)
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
 				jr $ra
 				solutionsC:
 				addi $t0, $t0, 9
-				sb $t0, timer($a0)
+				sb $t0, solutionsRemaining($a0)
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
 				li $a0, 1
 				lb $t0, solutionsRemaining($a0)
 				beqz $t0, solutionsD
 				subi $t0, $t0, 1
 				sb $t0, solutionsRemaining($a0)
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
 				jr $ra
 				solutionsD:
 				li $a0, 1
@@ -173,7 +181,6 @@ Display:
 	sw $a0, 4($sp)
 	li $a0, 13
 	sb $a0, 0xFFFF000C
-	jal getTimeString
 	la $a0, timeString
 	jal printN
 	li $a0, 10
@@ -304,13 +311,13 @@ ExitKernel:
 
 .data
 solutionsRemaining: .byte 0,0,0,0
-timer: .byte 0,0,0,0
+timer: .byte 0,5,0
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 'a','b','c','g','t','y',0,'u',0
-wordsRemaining: .asciiz "000 words remaining\n"
-timeString: .asciiz "000 presses remaining\n"
+wordsRemaining: .asciiz "*000 words remaining\n"
+timeString: .asciiz "*00 tries remaining*\n"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 lost: .asciiz "ow lose"
@@ -321,6 +328,7 @@ play: .asciiz "play!\n"
 .text
 
 main:
+	li $s7, 1
 	li $v0,4
 	la $a0, loading
 	syscall
@@ -378,10 +386,14 @@ main:
 GamePlay:
 	addiu $sp, $sp, -4
 	sw $ra, ($sp)
+	tlti $s7, 2
+ 	lw $s7, ($sp)    
+ 	addiu $sp, $sp, 4
+ 	li $s7, 0
 
 	GamePlayLoop:
-		lw $t0, timer($0)
-		beqz $t0, lostCondition
+		lb $t0, timer($0)
+		bnez $t0, lostCondition
 		lb $t0, inputBuffer($0)
 		bne $t0, $0, parseInput
 		lw $t0, solutionsRemaining($0)
@@ -427,9 +439,10 @@ GamePlay:
 			jal horfdorf
 			
 			#increment timer by 1 and decrement the number of solutions remaining by one.
-			lw $t0, timer($0)
+			li $t0, 2
+			lw $t0, timer($t0)
 			addiu $t0, $t0, 1
-			sw $t0, timer($0)
+			sw $t0, timer($t0)
 			solutionsRemainSubtract:
 				li $a0, 3
 				lb $t0, solutionsRemaining($a0)
@@ -709,10 +722,25 @@ createsolutionsstring:
 				beq $t2, 0x00000000, matchend # branches if no more data
 				j matchfoundloop
 			matchend:
-				move $t3, $0
-				lw $t4, solutionsRemaining
+				li $t3, 3
+				lb $t4, solutionsRemaining($t3)
+				beq $t4, 9, partB
 				addi $t4, $t4, 1
-				sw $t4, solutionsRemaining
+				sb $t4, solutionsRemaining($t3)
+				partB:
+				sb $0, solutionsRemaining($t3)
+				li $t3, 2
+				lb $t4, solutionsRemaining($t3)
+				beq $t4, 9, partC
+				addi $t4, $t4, 1
+				sb $t4, solutionsRemaining($t3)
+				partC:
+				sb $0, solutionsRemaining($t3)
+				li $t3, 1
+				lb $t4, solutionsRemaining($t3)
+				addi $t4, $t4, 1
+				sb $t4, solutionsRemaining($t3)
+				move $t3, $0
 				j createloop
 	endsolutions:
 		addi $t2, $0, 0x000000c # puts a null terminator at the end of the solutions list
