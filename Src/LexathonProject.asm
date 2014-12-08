@@ -23,11 +23,76 @@ srl $a0, $a0, 2
 andi $a0, $a0, 31
 #syscall
 
+mainDisplay:
+li $v0, 4
+lw $a0, timeString
+syscall
+li $v0, 1
+la $a0, timer
+syscall
+li $v0, 11
+li $a0, 10
+syscall
+jal drawgui
+li $v0, 4
+lw $a0, wordsRemaining
+syscall
+li $v0, 1
+lw $a0, solutionsRemaining
+syscall
+li $v0, 11
+li $a0, 10
+syscall
+li $v0, 5
+syscall
+j ExitKernel
+
+drawgui: #prints grid display
+	la $t0, puzzle($0)
+	li $v0, 11
+	lb  $a0, 1($t0) #prints first character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 2($t0) #prints second character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 3($t0) #prints third character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 4($t0) # prints fourth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 0($t0) # prints middle character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 5($t0) # prints sixth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	lb $a0, 6($t0) # prints seventh character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 7($t0) # prints eighth character
+	syscall
+	addi $a0, $0, 0x00000020 # prints a space
+	syscall
+	lb $a0, 8($t0) # prints ninth character
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	addi $a0, $0, 0x0000000A # prints new line
+	syscall
+	jr $ra
+
+
 keyboardInterrupt:
 	#updates the character timer
-	lw $s1, timer
-	subi $s1, $s1, 1
-	sw $s1, timer
 	li $s7, 0
 	addi $sp, $sp, -16
 	sw $s1, ($sp)
@@ -67,6 +132,9 @@ keyboardInterrupt:
 		j Display #returns to the program
 
 	compareByEnter:
+		lw $s1, timer
+		subi $s1, $s1, 1
+		sw $s1, timer
 		addi $s4, $0, 1
 		lb $k1, inputBuffer($s4)
 		addi, $k1, $k1, 2
@@ -297,10 +365,11 @@ lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 'a','b','c','g','t','y',0,'u',0
-wordsRemaining: .asciiz "000 words remaining\n"
+wordsRemaining: .asciiz "words remaining: "
 timeString: .asciiz "000 presses remaining\n"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
+newLine: .asciiz "/n"
 lost: .asciiz "ow lose"
 winrar: .asciiz "wow win"
 loading: .asciiz "loading\n"
@@ -378,7 +447,10 @@ GamePlay:
 		bne $t0, $0, parseInput
 		lw $t0, solutionsRemaining($0)
 		beq $t0, $0 wonCondition 
-		j GamePlayLoop 
+		tlti $s7, 2
+		lw $s7, ($sp)	
+		addiu $sp, $sp, 4
+		j GamePlayLoop
 	lostCondition:
 		li $v0, 4
 		la $a0, lost
@@ -816,51 +888,6 @@ nullterminate:#converts a \n-terminated string into a null-terminated string. ar
 		lw $a0, 8($sp)
 		addiu $sp, $sp, 12
 		jr $ra
-
-drawgui: #prints grid display
-	li $t1, 2
-	la $t0, inputBuffer($t1)
-	li $v0, 11
-	lb  $a0, 1($t0) #prints first character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 2($t0) #prints second character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 3($t0) #prints third character
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	lb $a0, 4($t0) # prints fourth character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 0($t0) # prints middle character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 5($t0) # prints sixth character
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	lb $a0, 6($t0) # prints seventh character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 7($t0) # prints eighth character
-	syscall
-	addi $a0, $0, 0x00000020 # prints a space
-	syscall
-	lb $a0, 8($t0) # prints ninth character
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	jr $ra
-
 
 userInputSection:
 #time for all the input stuff
