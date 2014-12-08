@@ -23,25 +23,30 @@ srl $a0, $a0, 2
 andi $a0, $a0, 31
 #syscall
 
+li $s7, 0
+
 mainDisplay:
 li $v0, 4
-lw $a0, timeString
+la $a0, timeString
 syscall
 li $v0, 1
-la $a0, timer
+lw $a0, timer
 syscall
 li $v0, 11
 li $a0, 10
 syscall
 jal drawgui
 li $v0, 4
-lw $a0, wordsRemaining
+la $a0, wordsRemaining
 syscall
 li $v0, 1
 lw $a0, solutionsRemaining
 syscall
 li $v0, 11
 li $a0, 10
+syscall
+li $v0, 4
+la $a0, inputQuestion
 syscall
 li $v0, 5
 syscall
@@ -93,7 +98,6 @@ drawgui: #prints grid display
 
 keyboardInterrupt:
 	#updates the character timer
-	li $s7, 0
 	addi $sp, $sp, -16
 	sw $s1, ($sp)
 	sw $s4, 4($sp)
@@ -360,20 +364,21 @@ ExitKernel:
 
 .data
 solutionsRemaining: .word 1
-timer: .word 999
+timer: .word 50
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 'a','b','c','g','t','y',0,'u',0
 wordsRemaining: .asciiz "words remaining: "
-timeString: .asciiz "000 presses remaining\n"
+timeString: .asciiz "presses remaining: "
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
-newLine: .asciiz "/n"
-lost: .asciiz "ow lose"
-winrar: .asciiz "wow win"
+newLine: .asciiz "\n"
+lost: .asciiz "\now lose\n"
+winrar: .asciiz "\nwow win\n"
 loading: .asciiz "loading\n"
 play: .asciiz "play!\n"
+inputQuestion: .asciiz "\nEnter a word:"
 
 .text
 
@@ -433,14 +438,8 @@ main:
 	syscall
 #Gameplay loop loops while the user is playing.
 GamePlay:
-	addiu $sp, $sp, -4
-	sw $ra, ($sp)
-	tlti $s7, 2
-	lw $s7, ($sp)	
-	addiu $sp, $sp, 4
 
 	GamePlayLoop:
-		li $s7, 1
 		lw $t0, timer($0)
 		beqz $t0, lostCondition
 		lb $t0, inputBuffer($0)
@@ -503,9 +502,6 @@ GamePlay:
 			jal shuffle
 			j exitParse
 		exitParse: #clears the buffer and allows for writing into the buffer again
-			tlti $s7, 2
-			lw $s7, ($sp)	
-			addiu $sp, $sp, 4
 			li $t0, 1
 			li $t1, 10
 			exitParseLoop:
