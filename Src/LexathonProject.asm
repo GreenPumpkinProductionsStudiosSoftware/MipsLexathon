@@ -54,15 +54,14 @@ keyboardInterrupt:
 
 	addCharIntoBuffer:
 		#checkIndexBuffer Location
-		addi $s4, $0, 1
-		lb $k1, inputBuffer($s4)
-		addi, $k1, $k1, 2
+		addi $s4, $0, 1 #get index
+		lb $k1, inputBuffer($s4) #get index
+		addi, $k1, $k1, 2  #add for index offset
 		#write
-		sb $k0, inputBuffer($k1)		
-		li $s4, 1
-		lb $k1, inputBuffer($s4)
+		sb $k0, inputBuffer($k1) #store keyboard byte into input buffer
+		subi $k1, $k1, 1
+		sb $k1, inputBuffer($s4) #store index+1 into index
 		li $s4, 8
-		beq 
 	
 		lw $s1, ($sp)
 		lw $s4, 4($sp)
