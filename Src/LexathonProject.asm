@@ -326,7 +326,7 @@ loading: .asciiz "loading\n"
 .text
 
 main:
-	li $v0,4
+	li $v0,30
 	la $a0, loading
 	syscall
 	addi $a0, $0, 0x10040000 #loads dictionary9 into 0x10040000, don't know if we actually want it there
@@ -468,7 +468,7 @@ generatearray:
 	la $a0, lexdict9
 	li $a1, 0
 	li $a2, 0
-	syscall
+	syscall 
 	nop
 	nop
 	
@@ -494,7 +494,7 @@ generatearray:
 	syscall	
 	
 	#jumble the word at the appropriate address.	
-	li $t1, 11 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
+	li $t1, 10 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
 	multu $a0, $t1
 	mflo $a0
 	addu $a0, $a0, $t0
@@ -779,7 +779,7 @@ checkanswo:
 			beq $t0, $t1, loopeagain #if the character at $a1 is an \n or \r, then we're ready to read a word.
 			j findnextword	
 			loopeagain:	
-				addiu $a1, $a1, 2 #IMPORTANT: windows users change this to a two before running. I think.
+				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
 				lb $t0, ($a1)
 				beq $t0, $t2, searchnegative	#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n,
 								#which would normally set the program back to loope. this prevents this by checking for the terminating character, which we have assigned to be
