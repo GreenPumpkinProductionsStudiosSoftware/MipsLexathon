@@ -17,30 +17,17 @@ sw $a0, 4($sp)
 sw $a1, 8($sp)
 
 
-#li $v0, 1
-#mfc0 $a0, $13
-#srl $a0, $a0, 2
-#andi $a0, $a0, 31
+li $v0, 1
+mfc0 $a0, $13
+srl $a0, $a0, 2
+andi $a0, $a0, 31
 #syscall
 
-bnez $s7, keyboardInterrupt #Clock interrupt is 0, and that is all we care about.
-
-clockInterrupt:
-	addi $sp, $sp, -4
-	sw $s1, ($sp)
-
+keyboardInterrupt:
+	#updates the character timer
 	lw $s1, timer
 	subi $s1, $s1, 1
 	sw $s1, timer
-	sw $s1, 0xFFFF000C
-	
-	li $s7, 1
-	
-	lw $s1, ($sp)
-	addiu $sp, $sp, 4
-	j Display
-
-keyboardInterrupt:
 	li $s7, 0
 	addi $sp, $sp, -16
 	sw $s1, ($sp)
@@ -77,7 +64,7 @@ keyboardInterrupt:
 		lw $s5, 8($sp)
 		lw $s6, 12($sp)
 		addiu $sp, $sp, 16
-		j ExitKernel #returns to the program
+		j Display #returns to the program
 
 	compareByEnter:
 		addi $s4, $0, 1
@@ -92,7 +79,7 @@ keyboardInterrupt:
 		lw $s5, 8($sp)
 		lw $s6, 12($sp)
 		addiu $sp, $sp, 16
-		j ExitKernel
+		j Display
 		
 	backspace:
 		move $s0, $0	
@@ -106,7 +93,7 @@ keyboardInterrupt:
 		lw $s5, 8($sp)
 		lw $s6, 12($sp)
 		addiu $sp, $sp, 16
-		j ExitKernel
+		j Display
 
 #converts the the value in timer into a string that can be used for printing.
 getTimeString: #put into t4 the seconds, gets each number and makes a string
@@ -186,7 +173,7 @@ Display:
 	li $a0, 10
 	sw $a0, 0xffff000c
 	la $a0, 0x10040000
-	jal printFF
+	#jal printFF
 	lw $s1, ($sp)
 	lw $a0, 4($sp)
 	addiu $sp, $sp, 8
@@ -309,14 +296,14 @@ ExitKernel:
 #END KERNEL DATA :3##############################################################################################################
 
 .data
+solutionsRemaining: .word 1
+timer: .word 999
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 'a','b','c','g','t','y',0,'u',0
-timer: .word 99
 wordsRemaining: .asciiz "000 words remaining\n"
-solutionsRemaining: .word 1
-timeString: .asciiz "000 seconds\n"
+timeString: .asciiz "000 presses remaining\n"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 lost: .asciiz "ow lose"
@@ -326,7 +313,7 @@ loading: .asciiz "loading\n"
 .text
 
 main:
-	li $v0,30
+	li $v0,4
 	la $a0, loading
 	syscall
 	addi $a0, $0, 0x10040000 #loads dictionary9 into 0x10040000, don't know if we actually want it there
@@ -468,7 +455,7 @@ generatearray:
 	la $a0, lexdict9
 	li $a1, 0
 	li $a2, 0
-	syscall 
+	syscall
 	nop
 	nop
 	
@@ -494,7 +481,7 @@ generatearray:
 	syscall	
 	
 	#jumble the word at the appropriate address.	
-	li $t1, 10 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
+	li $t1, 11 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
 	multu $a0, $t1
 	mflo $a0
 	addu $a0, $a0, $t0
@@ -779,7 +766,7 @@ checkanswo:
 			beq $t0, $t1, loopeagain #if the character at $a1 is an \n or \r, then we're ready to read a word.
 			j findnextword	
 			loopeagain:	
-				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
+				addiu $a1, $a1, 2 #IMPORTANT: windows users change this to a two before running. I think.
 				lb $t0, ($a1)
 				beq $t0, $t2, searchnegative	#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n,
 								#which would normally set the program back to loope. this prevents this by checking for the terminating character, which we have assigned to be
