@@ -24,10 +24,6 @@ andi $a0, $a0, 31
 #syscall
 
 keyboardInterrupt:
-	#updates the character timer
-	lw $s1, timer
-	subi $s1, $s1, 1
-	sw $s1, timer
 	li $s7, 0
 	addi $sp, $sp, -16
 	sw $s1, ($sp)
@@ -70,9 +66,12 @@ keyboardInterrupt:
 		lw $s5, 8($sp)
 		lw $s6, 12($sp)
 		addiu $sp, $sp, 16
-		j Display #returns to the program
+		j ExitKernel #returns to the program
 
 	compareByEnter:
+		lw $s1, timer
+		subi $s1, $s1, 1
+		sw $s1, timer
 		addi $s4, $0, 1
 		lb $k1, inputBuffer($s4)
 		addi, $k1, $k1, 2
@@ -94,73 +93,79 @@ keyboardInterrupt:
 		beq $s0, $0, ExitKernel #exits if index is 0, meaning that there are no characters to delete	
 		addi $s0, $s0, 2
 		sb $0, inputBuffer($s0)
+		li $s0, 1	
+		lb $k1, inputBuffer($s0)
+		subi $k1, $k1, 1
+		sb $k1, inputBuffer($s0) #store index+1 into index
 		
 		lw $s1, ($sp)
 		lw $s4, 4($sp)
 		lw $s5, 8($sp)
 		lw $s6, 12($sp)
 		addiu $sp, $sp, 16
-		j Display
+		j ExitKernel
 
 #converts the the value in timer into a string that can be used for printing.
-getTimeString: #put into t4 the seconds, gets each number and makes a string
-	addi $sp, $sp, -16
-	sw $s1, ($sp)
-	sw $s4, 4($sp)
-	sw $s5, 8($sp)
-	sw $s6, 12($sp)
-	la $s4, timer
-	li $s5, 10
-	li $s6, 2
-	div $s4, $s5
-	mflo $s4
-	mfhi $s5
-	addi $s5, $s5, 48
-	sb $s5, timeString($s6)
-	li $s6, 10
-	div $s4, $s6
-	mflo $s4
-	mfhi $s5
-	addi $s4, $s4, 48
-	addi $s5, $s5, 48
-	sb $s4, timeString($0)
-	li $s4, 1
-	sb $s5, timeString($s4)
-	sw $s1, ($sp)
-	lw $s4, 4($sp)
-	lw $s5, 8($sp)
-	lw $s6, 12($sp)
-	addiu $sp, $sp, 16
-	jr $ra
+getTimeString:
+				li $a0, 3
+				lb $t0, timer($a0)
+				beqz $t0, timerB
+				subi $t0, $t0, 1
+				sb $t0, timer($a0)
+				jr $ra
+				timerB:
+				addi $t0, $t0, 9
+				sb $t0, timer($a0)
+				li $a0, 2
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsPartC
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				jr $ra
+				timerC:
+				addi $t0, $t0, 9
+				sb $t0, timer($a0)
+				li $a0, 1
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsPartD
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				jr $ra
+				timerD:
+				li $a0, 1
+				sb $a0, solutionsRemaining($0)
+				jr $ra
 	
 getWordString: #put into t4 the seconds, gets each number and makes a string
-	addi $sp, $sp, -16
-	sw $s1, ($sp)
-	sw $s4, 4($sp)
-	sw $s5, 8($sp)
-	sw $s6, 12($sp)
-	la $s4, solutionsRemaining
-	li $s5, 10
-	li $s6, 2
-	div $s4, $s5
-	mfhi $s5
-	addi $s5, $s5, 48
-	sb $s5, wordsRemaining($s6)
-	li $s6, 10
-	div $s5, $s6
-	mflo $s4
-	mfhi $s5
-	addi $s4, $s4, 48
-	addi $s5, $s5, 48
-	sb $s4, wordsRemaining($0)
-	li $s4, 1
-	sb $s5, wordsRemaining($s4)
-	lw $s4, ($sp)
-	lw $s4, 4($sp)
-	lw $s5, 8($sp)
-	lw $s6, 12($sp)
-	addiu $sp, $sp, 16
-	jr $ra
+				li $a0, 3
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsB
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				jr $ra
+				solutionsB:
+				addi $t0, $t0, 9
+				sb $t0, timer($a0)
+				li $a0, 2
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsC
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				jr $ra
+				solutionsC:
+				addi $t0, $t0, 9
+				sb $t0, timer($a0)
+				li $a0, 1
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsD
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				jr $ra
+				solutionsD:
+				li $a0, 1
+				sb $a0, solutionsRemaining($0)
+				jr $ra
+	
 
 Display:
 	addi $sp, $sp, -8
@@ -298,8 +303,8 @@ ExitKernel:
 #END KERNEL DATA :3##############################################################################################################
 
 .data
-solutionsRemaining: .word 1
-timer: .word 999
+solutionsRemaining: .byte 0,0,0,0
+timer: .byte 0,0,0,0
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
@@ -421,13 +426,34 @@ GamePlay:
 			li $a1, 0x10040000 #location of found list that needs to be appended to.
 			jal horfdorf
 			
-			#increment timer by 10 and decrement the number of solutions remaining by one.
+			#increment timer by 1 and decrement the number of solutions remaining by one.
 			lw $t0, timer($0)
-			addiu $t0, $t0, 10
+			addiu $t0, $t0, 1
 			sw $t0, timer($0)
-			lw $t0, solutionsRemaining
-			addiu $t0, $t0, -1
-			sw $t0, solutionsRemaining
+			solutionsRemainSubtract:
+				li $a0, 3
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsPartB
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				j exitParse
+				solutionsPartB:
+				li $a0, 2
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsPartC
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				j exitParse
+				solutionsPartC:
+				li $a0, 1
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsPartD
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				j exitParse
+				solutionsPartD:
+				li $a0, 1
+				sb $a0, solutionsRemaining($0)
 			j exitParse
 		shuffleIt:
 			la $v0, puzzle
