@@ -48,7 +48,16 @@ syscall
 li $v0, 4
 la $a0, inputQuestion
 syscall
-li $v0, 5
+li $v0, 8
+la $a0, stringBuffer
+li $a0, 10
+syscall
+jal inputBufferSetter
+li $v0, 1
+lw $a0, timer
+syscall
+subi $a0, $a0, 1
+sw $a0, timer
 syscall
 j ExitKernel
 
@@ -95,260 +104,30 @@ drawgui: #prints grid display
 	syscall
 	jr $ra
 
-
-keyboardInterrupt:
-	#updates the character timer
+inputBufferSetter:
+	#sets the entire buffer
 	addi $sp, $sp, -16
 	sw $s1, ($sp)
 	sw $s4, 4($sp)
 	sw $s5, 8($sp)
 	sw $s6, 12($sp)
-	#checkIndexBuffer
-	#set t5 to a number that stores the first byte of the inputBuffer
-	lb $s5, inputBuffer($0)
 	
-	beq $s5, $0, loadChar
+	li $s1, 0
+	li $s4, 2
+	loop: #if string ends, break out of
+		lb $s5, stringBuffer($s1)
+		sb $s5, inputBuffer($s4)
+		addi $s1, $s1, 1
+		addi $s4, $s4, 1
+		lw $s6, stringBuffer($s1)
+		beq $s6, $0, notLoop
+		j loop
+	notLoop:
 	lw $s1, ($sp)
 	lw $s4, 4($sp)
 	lw $s5, 8($sp)
 	lw $s6, 12($sp)
 	addiu $sp, $sp, 16
-	j ExitKernel
-	loadChar:
-		lbu $k0, 0xffff0004 #loads the character typed into the keyboard
-		addi $s6, $0, 10 #loads enter
-		beq $k0, $s6, compareByEnter
-		li $s1, 8
-		beq $k0, $s1, backspace
-
-	addCharIntoBuffer:
-		#checkIndexBuffer Location
-		addi $s4, $0, 1
-		lb $k1, inputBuffer($s4)
-		addi, $k1, $k1, 2
-		#write
-		sb $k0, inputBuffer($k1)
-		lw $s1, ($sp)
-		lw $s4, 4($sp)
-		lw $s5, 8($sp)
-		lw $s6, 12($sp)
-		addiu $sp, $sp, 16
-		j Display #returns to the program
-
-	compareByEnter:
-		lw $s1, timer
-		subi $s1, $s1, 1
-		sw $s1, timer
-		addi $s4, $0, 1
-		lb $k1, inputBuffer($s4)
-		addi, $k1, $k1, 2
-		sb $k0, inputBuffer($k1)	
-		#set read byte to 1
-		addi $k1, $0, 1
-		sb $k1, inputBuffer($0)
-		lw $s1, ($sp)
-		lw $s4, 4($sp)
-		lw $s5, 8($sp)
-		lw $s6, 12($sp)
-		addiu $sp, $sp, 16
-		j Display
-		
-	backspace:
-		move $s0, $0	
-		addiu $s0, $s0, 1
-		lb $s0, inputBuffer($s0)
-		beq $s0, $0, ExitKernel #exits if index is 0, meaning that there are no characters to delete	
-		addi $s0, $s0, 2
-		sb $0, inputBuffer($s0)
-		lw $s1, ($sp)
-		lw $s4, 4($sp)
-		lw $s5, 8($sp)
-		lw $s6, 12($sp)
-		addiu $sp, $sp, 16
-		j Display
-
-#converts the the value in timer into a string that can be used for printing.
-getTimeString: #put into t4 the seconds, gets each number and makes a string
-	addi $sp, $sp, -16
-	sw $s1, ($sp)
-	sw $s4, 4($sp)
-	sw $s5, 8($sp)
-	sw $s6, 12($sp)
-	la $s4, timer
-	li $s5, 10
-	li $s6, 2
-	div $s4, $s5
-	mflo $s4
-	mfhi $s5
-	addi $s5, $s5, 48
-	sb $s5, timeString($s6)
-	li $s6, 10
-	div $s4, $s6
-	mflo $s4
-	mfhi $s5
-	addi $s4, $s4, 48
-	addi $s5, $s5, 48
-	sb $s4, timeString($0)
-	li $s4, 1
-	sb $s5, timeString($s4)
-	sw $s1, ($sp)
-	lw $s4, 4($sp)
-	lw $s5, 8($sp)
-	lw $s6, 12($sp)
-	addiu $sp, $sp, 16
-	jr $ra
-	
-getWordString: #put into t4 the seconds, gets each number and makes a string
-	addi $sp, $sp, -16
-	sw $s1, ($sp)
-	sw $s4, 4($sp)
-	sw $s5, 8($sp)
-	sw $s6, 12($sp)
-	la $s4, solutionsRemaining
-	li $s5, 10
-	li $s6, 2
-	div $s4, $s5
-	mfhi $s5
-	addi $s5, $s5, 48
-	sb $s5, wordsRemaining($s6)
-	li $s6, 10
-	div $s5, $s6
-	mflo $s4
-	mfhi $s5
-	addi $s4, $s4, 48
-	addi $s5, $s5, 48
-	sb $s4, wordsRemaining($0)
-	li $s4, 1
-	sb $s5, wordsRemaining($s4)
-	lw $s4, ($sp)
-	lw $s4, 4($sp)
-	lw $s5, 8($sp)
-	lw $s6, 12($sp)
-	addiu $sp, $sp, 16
-	jr $ra
-
-Display:
-	addi $sp, $sp, -8
-	sw $s1, ($sp)
-	sw $a0, 4($sp)
-	li $a0, 13
-	sb $a0, 0xFFFF000C
-	jal getTimeString
-	la $a0, timeString
-	jal printN
-	li $a0, 10
-	sw $a0, 0xffff000c
-	jal drawgrid
-	jal getWordString
-	la $a0, wordsRemaining
-	jal printN
-	li $a0, 10
-	sw $a0, 0xffff000c
-	la $a0, 0x10040000
-	#jal printFF
-	lw $s1, ($sp)
-	lw $a0, 4($sp)
-	addiu $sp, $sp, 8
-	j ExitKernel
-
-#print a \f terminated string.
-#arguments: a0= starting address of string to print.
-printFF:
-	addi $sp, $sp, -16
-	sw $s0, ($sp)
-	sw $s1, 4($sp)
-	sw $s2, 8($sp)
-	sw $a0, 12($sp)
-
-	#Decimal Value 12 = \f
-	li 	$s2, 12
-	la 	$s0, ($a0)
-	
-	outputCycle:
-		lb	$s1, ($s0)
-		beq	$s1, $s2, return
-		sb	$s1, 0xFFFF000C
-		addi	$s0, $s0, 1
-		j outputCycle
-			
-	return:
-		lw $s0, ($sp)
-		lw $s1, 4($sp)
-		lw $s2, 8($sp)
-		lw $a0, 12($sp)
-		addiu $sp, $sp, 16	
-		jr 	$ra
-printN:
-	addi $sp, $sp, -16
-	sw $s0, ($sp)
-	sw $s1, 4($sp)
-	sw $s2, 8($sp)
-	sw $a0, 12($sp)
-
-	#Decimal Value 12 = \f
-	li 	$s2, 10
-	la 	$s0, ($a0)
-	
-	outputCycleN:
-		lb	$s1, ($s0)
-		beq	$s1, $s2, return
-		sb	$s1, 0xFFFF000C
-		addi	$s0, $s0, 1
-		j outputCycle
-			
-	returnN:
-		lw $s0, ($sp)
-		lw $s1, 4($sp)
-		lw $s2, 8($sp)
-		lw $a0, 12($sp)
-		addiu $sp, $sp, 16	
-		jr 	$ra		
-drawgrid: # prints 3x3 grid of the word at the address stored in $v0
-	addi $sp, $sp, -8
-	sw $s1, ($sp)
-	sw $s0, 4($sp)
-
-	la $s0, puzzle
-	lb  $s1, 1($s0) #prints first character
-	sb  $s1, 0xFFFF000C
-	addi $s1, $0, 0x00000020 # prints a space
-	sb $s1, 0xFFFF000C
-	lb $s1, 2($s0) #prints second character
-	sb $s1, 0xFFFF000C
-	addi $s1, $0, 0x00000020 # prints a space
-	sb $s1, 0xFFFF000C
-	lb $s1, 3($s0) #prints third character
-	sb $s1, 0xFFFF000C
-	addi $s1, $0, 0x0000000A # prints new line
-	sb $s1, 0xFFFF000C
-	lb $s1, 4($s0) # prints fourth character
-	sb $s1, 0xFFFF000C
-	addi $s1, $0, 0x00000020 # prints a space
-	sb $s1, 0xFFFF000C
-	lb $s1, 0($s0) # prints middle character
-	sb $s1, 0xFFFF000C
-	addi $s1, $0, 0x00000020 # prints a space
-	sb $s1, 0xFFFF000C
-	lb $s1, 5($s0) # prints sixth character
-	sb $s1, 0xFFFF000C
-	addi $s1, $0, 0x0000000A # prints new line
-	sb $s1, 0xFFFF000C
-	lb $s1, 6($s0) # prints seventh character
-	sb $s1, 0xFFFF000C
-	addi $s1, $0, 0x00000020 # prints a space
-	sb $s1, 0xFFFF000C
-	lb $s1, 7($s0) # prints eighth character
-	sb $s1, 0xFFFF000C
-	addi $s1, $0, 0x00000020 # prints a space
-	sb $s1, 0xFFFF000C
-	lb $s1, 8($s0) # prints ninth character
-	sb $s1, 0xFFFF000C
-	addi $s1, $0, 0x0000000A # prints new line
-	sb $s1, 0xFFFF000C	
-	
-	lw $s1, ($sp)
-	lw $s0, 4($sp)
-	addiu $sp, $sp, 8	
 	jr $ra
 		
 ExitKernel:
@@ -364,11 +143,12 @@ ExitKernel:
 
 .data
 solutionsRemaining: .word 1
-timer: .word 50
+timer: .word 25
+stringBuffer: .space 10
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
-puzzle: .byte 'a','b','c','g','t','y',0,'u',0
+puzzle: .byte 0,'f',0,'a',0,'i',0,'l',0
 wordsRemaining: .asciiz "words remaining: "
 timeString: .asciiz "presses remaining: "
 exitString: .asciiz "q\n"
