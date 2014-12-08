@@ -38,7 +38,7 @@ keyboardInterrupt:
 	#set t5 to a number that stores the first byte of the inputBuffer
 	lb $s5, inputBuffer($0)
 	
-	beq $s5, $0, loadChar
+	beq $s5, $0, loadChar #if the first byte is 0 then the string is writable
 	lw $s1, ($sp)
 	lw $s4, 4($sp)
 	lw $s5, 8($sp)
@@ -58,7 +58,12 @@ keyboardInterrupt:
 		lb $k1, inputBuffer($s4)
 		addi, $k1, $k1, 2
 		#write
-		sb $k0, inputBuffer($k1)
+		sb $k0, inputBuffer($k1)		
+		li $s4, 1
+		lb $k1, inputBuffer($s4)
+		li $s4, 8
+		beq 
+	
 		lw $s1, ($sp)
 		lw $s4, 4($sp)
 		lw $s5, 8($sp)
@@ -74,6 +79,7 @@ keyboardInterrupt:
 		#set read byte to 1
 		addi $k1, $0, 1
 		sb $k1, inputBuffer($0)
+		
 		lw $s1, ($sp)
 		lw $s4, 4($sp)
 		lw $s5, 8($sp)
@@ -82,12 +88,12 @@ keyboardInterrupt:
 		j Display
 		
 	backspace:
-		move $s0, $0	
-		addiu $s0, $s0, 1
+		li $s0, 1	
 		lb $s0, inputBuffer($s0)
 		beq $s0, $0, ExitKernel #exits if index is 0, meaning that there are no characters to delete	
 		addi $s0, $s0, 2
 		sb $0, inputBuffer($s0)
+		
 		lw $s1, ($sp)
 		lw $s4, 4($sp)
 		lw $s5, 8($sp)
@@ -366,12 +372,8 @@ main:
 GamePlay:
 	addiu $sp, $sp, -4
 	sw $ra, ($sp)
-	tlti $s7, 2
-	lw $s7, ($sp)	
-	addiu $sp, $sp, 4
 
 	GamePlayLoop:
-		li $s7, 1
 		lw $t0, timer($0)
 		beqz $t0, lostCondition
 		lb $t0, inputBuffer($0)
@@ -431,11 +433,8 @@ GamePlay:
 			jal shuffle
 			j exitParse
 		exitParse: #clears the buffer and allows for writing into the buffer again
-			tlti $s7, 2
-			lw $s7, ($sp)	
-			addiu $sp, $sp, 4
 			li $t0, 1
-			li $t1, 10
+			li $t1, 11
 			exitParseLoop:
 				sb $0, inputBuffer($t0)
 				addiu $t0, $t0, 1
