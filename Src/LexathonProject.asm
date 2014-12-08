@@ -68,10 +68,9 @@ keyboardInterrupt:
 		lw $s5, 8($sp)
 		lw $s6, 12($sp)
 		addiu $sp, $sp, 16
-		j ExitKernel #returns to the program
+		j Display #returns to the program
 
 	compareByEnter:
-		jal getTimeString
 		addi $s4, $0, 1
 		lb $k1, inputBuffer($s4)
 		addi, $k1, $k1, 2
@@ -103,7 +102,7 @@ keyboardInterrupt:
 		lw $s5, 8($sp)
 		lw $s6, 12($sp)
 		addiu $sp, $sp, 16
-		j ExitKernel
+		j Display
 
 #converts the the value in timer into a string that can be used for printing.
 getTimeString:
@@ -181,6 +180,7 @@ Display:
 	sw $a0, 4($sp)
 	li $a0, 13
 	sb $a0, 0xFFFF000C
+	jal getTimeString
 	la $a0, timeString
 	jal printN
 	li $a0, 10
