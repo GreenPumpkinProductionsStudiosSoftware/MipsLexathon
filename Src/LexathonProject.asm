@@ -316,6 +316,16 @@ main:
 	jal generatearray
 	move $t0, $v0
 	
+	move $a0, $a0
+	li $a2, 10
+	loadintopuzzle:		
+		lb $a0, ($v0)
+		beq $a0, $a2, returntomain	
+		sb $a0, puzzle($a1)
+		addiu $a1, $a1, 1
+		addiu $v0, $v0, 1
+		j loadintopuzzle
+	returntomain:	
 	li $v0,4
 	la $a0, loading
 	syscall
