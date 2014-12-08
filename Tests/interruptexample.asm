@@ -22,8 +22,8 @@
 #INTERRUPT HANDLER (only runs when a key is pressed):
 .ktext 0x80000180 #kernel mode instruction data follows. "0x80000180" signifies the location of the instructions in memory. This address is required by MARS.
 #uncomment the two following lines to see the custom jarfile in action.
-#li $k0, 13
-#sb $k0, 0xffff000c
+li $k0, 13
+sb $k0, 0xffff000c
 lbu $k0, 0xffff0004 #loads the character typed into the keyboard
 sb $k0, 0xffff000c #stores that character into the display byte.
 eret #returns to the program

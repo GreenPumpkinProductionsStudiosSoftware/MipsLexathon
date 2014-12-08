@@ -16,28 +16,32 @@ sw $ra, ($sp)
 sw $a0, 4($sp)
 sw $a1, 8($sp)
 
-mfc0 $s1, $13 # $13 is cause register
-srl $s1, $s1, 2
-andi $s1, $s1, 31 # $a0=exception code
-li  $s2, 13
-bne $s1, $s2, keyboardInterrupt #Clock interrupt is not 0, and that is all we care about.
+
+#li $v0, 1
+#mfc0 $a0, $13
+#srl $a0, $a0, 2
+#andi $a0, $a0, 31
+#syscall
+
+bnez $s7, keyboardInterrupt #Clock interrupt is 0, and that is all we care about.
 
 clockInterrupt:
 	addi $sp, $sp, -4
 	sw $s1, ($sp)
 
-	la $s1, timer
+	lw $s1, timer
 	subi $s1, $s1, 1
 	sw $s1, timer
+	sw $s1, 0xFFFF000C
+	
+	li $s7, 1
 	
 	lw $s1, ($sp)
 	addiu $sp, $sp, 4
 	j Display
 
 keyboardInterrupt:
-	li $v0, 1
-	li $a0, 1
-	syscall
+	li $s7, 0
 	addi $sp, $sp, -16
 	sw $s1, ($sp)
 	sw $s4, 4($sp)
@@ -46,9 +50,7 @@ keyboardInterrupt:
 	#checkIndexBuffer
 	#set t5 to a number that stores the first byte of the inputBuffer
 	lb $s5, inputBuffer($0)
-	li $s1, 8
-
-	beq $s5, $s0, backspace
+	
 	beq $s5, $0, loadChar
 	lw $s1, ($sp)
 	lw $s4, 4($sp)
@@ -58,8 +60,10 @@ keyboardInterrupt:
 	j ExitKernel
 	loadChar:
 		lbu $k0, 0xffff0004 #loads the character typed into the keyboard
-		addi $s6, $0, 13 #loads enter
+		addi $s6, $0, 10 #loads enter
 		beq $k0, $s6, compareByEnter
+		li $s1, 8
+		beq $k0, $s1, backspace
 
 	addCharIntoBuffer:
 		#checkIndexBuffer Location
@@ -76,6 +80,10 @@ keyboardInterrupt:
 		j ExitKernel #returns to the program
 
 	compareByEnter:
+		addi $s4, $0, 1
+		lb $k1, inputBuffer($s4)
+		addi, $k1, $k1, 2
+		sb $k0, inputBuffer($k1)	
 		#set read byte to 1
 		addi $k1, $0, 1
 		sb $k1, inputBuffer($0)
@@ -165,7 +173,7 @@ Display:
 	sw $s1, ($sp)
 	sw $a0, 4($sp)
 	li $a0, 13
-	sb $s1, 0xFFFF000C
+	sb $a0, 0xFFFF000C
 	jal getTimeString
 	la $a0, timeString
 	jal printN
@@ -243,7 +251,7 @@ drawgrid: # prints 3x3 grid of the word at the address stored in $v0
 	sw $v0, 8($sp)
 	sw $a0, 12($sp)
 	move $t0, $v0 #moves address of selected jumbled word to $t0
-	lw $t0, puzzle
+	la $t0, puzzle
 	li $v0, 11
 	lb  $a0, 1($t0) #prints first character
 	sb  $s1, 0xFFFF000C
@@ -294,33 +302,40 @@ ExitKernel:
 	lw $a0 4($sp)
 	lw $a1 8($sp)	
 	addiu $sp, $sp, 12
+	addi $sp, $sp, -4 #THIS IS TO KEEP IT FROM TRAPPING REPEATEDLY
+	sw $s7, ($sp)
+	li $s7, 3
 	eret
 #END KERNEL DATA :3##############################################################################################################
 
 .data
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
-inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0
-puzzle: .byte 0,0,0,0,0,0,0,0,0
+inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
+puzzle: .byte 'a','b','c','g','t','y',0,'u',0
 timer: .word 99
 wordsRemaining: .asciiz "000 words remaining\n"
-solutionsRemaining: .word 0
+solutionsRemaining: .word 1
 timeString: .asciiz "000 seconds\n"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 lost: .asciiz "ow lose"
 winrar: .asciiz "wow win"
+loading: .asciiz "loading\n"
 
 .text
-startInput:
-li $t0, 0xffff0000
-li $t1, 0x00000002
-sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
 
 main:
+	li $v0,4
+	la $a0, loading
+	syscall
 	addi $a0, $0, 0x10040000 #loads dictionary9 into 0x10040000, don't know if we actually want it there
 	jal generatearray
 	move $t0, $v0
+	
+	li $v0,4
+	la $a0, loading
+	syscall
 	
 	li $v0, 13	
 	la $a0, lexdict
@@ -331,22 +346,37 @@ main:
 	addi $a1, $0, 0x1005a000 # loads dictionary into 0x1005a000
 	jal readfile
 	
+	li $v0,4
+	la $a0, loading
+	syscall
+	
 	move $v0, $t0
 	jal getplausiblewords
 	jal createsolutionsstring
 	
+	li $v0,4
+	la $a0, loading
+	syscall
+	
+	startInput:
+	li $t0, 0xffff0000
+	li $t1, 0x00000002
+	sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
+
 	jal GamePlay
 	
 	li $v0, 10
 	syscall
 #Gameplay loop loops while the user is playing.
 GamePlay:
-	li $s7, 1
 	addiu $sp, $sp, -4
 	sw $ra, ($sp)
 	tlti $s7, 2
+	lw $s7, ($sp)	
+	addiu $sp, $sp, 4
 
 	GamePlayLoop:
+		li $s7, 1
 		lw $t0, timer($0)
 		beqz $t0, lostCondition
 		lb $t0, inputBuffer($0)
@@ -407,6 +437,8 @@ GamePlay:
 			j exitParse
 		exitParse: #clears the buffer and allows for writing into the buffer again
 			tlti $s7, 2
+			lw $s7, ($sp)	
+			addiu $sp, $sp, 4
 			li $t0, 1
 			li $t1, 10
 			exitParseLoop:
@@ -437,11 +469,15 @@ generatearray:
 	li $a1, 0
 	li $a2, 0
 	syscall
+	nop
+	nop
 	
 	#load the entire file into the provided address 
 	move $a0, $v0
 	move $a1, $t0
 	jal readfile
+	nop
+	nop
 
 	#get the system time so i can use it as a seed
 	li $v0, 30
