@@ -11,7 +11,7 @@
 #         (Exception code 13)
 #Both of these interrupts are thrown through the KeyboardandDisplayEmulator class. 
 #saved registers are reserved for kernel data.
-addiu $sp, $sp, -12
+addi $sp, $sp, -12
 sw $ra, ($sp)
 sw $a0, 4($sp)
 sw $a1, 8($sp)
@@ -23,7 +23,7 @@ li  $s2, 13
 bne $s1, $s2, keyboardInterrupt #Clock interrupt is not 0, and that is all we care about.
 
 clockInterrupt:
-	addiu $sp, $sp, -4
+	addi $sp, $sp, -4
 	sw $s1, ($sp)
 
 	la $s1, timer
@@ -35,7 +35,10 @@ clockInterrupt:
 	j Display
 
 keyboardInterrupt:
-	addiu $sp, $sp, -16
+	li $v0, 1
+	li $a0, 1
+	syscall
+	addi $sp, $sp, -16
 	sw $s1, ($sp)
 	sw $s4, 4($sp)
 	sw $s5, 8($sp)
@@ -99,7 +102,7 @@ keyboardInterrupt:
 
 #converts the the value in timer into a string that can be used for printing.
 getTimeString: #put into t4 the seconds, gets each number and makes a string
-	addiu $sp, $sp, -16
+	addi $sp, $sp, -16
 	sw $s1, ($sp)
 	sw $s4, 4($sp)
 	sw $s5, 8($sp)
@@ -129,7 +132,7 @@ getTimeString: #put into t4 the seconds, gets each number and makes a string
 	jr $ra
 	
 getWordString: #put into t4 the seconds, gets each number and makes a string
-	addiu $sp, $sp, -16
+	addi $sp, $sp, -16
 	sw $s1, ($sp)
 	sw $s4, 4($sp)
 	sw $s5, 8($sp)
@@ -158,7 +161,7 @@ getWordString: #put into t4 the seconds, gets each number and makes a string
 	jr $ra
 
 Display:
-	addiu $sp, $sp, -8
+	addi $sp, $sp, -8
 	sw $s1, ($sp)
 	sw $a0, 4($sp)
 	li $a0, 13
@@ -184,7 +187,7 @@ Display:
 #print a \f terminated string.
 #arguments: a0= starting address of string to print.
 printFF:
-	addiu $sp, $sp, -16
+	addi $sp, $sp, -16
 	sw $s0, ($sp)
 	sw $s1, 4($sp)
 	sw $s2, 8($sp)
@@ -209,7 +212,7 @@ printFF:
 		addiu $sp, $sp, 16	
 		jr 	$ra
 printN:
-	addiu $sp, $sp, -16
+	addi $sp, $sp, -16
 	sw $s0, ($sp)
 	sw $s1, 4($sp)
 	sw $s2, 8($sp)
@@ -234,7 +237,7 @@ printN:
 		addiu $sp, $sp, 16	
 		jr 	$ra		
 drawgrid: # prints 3x3 grid of the word at the address stored in $v0
-	addiu $sp, $sp, -16
+	addi $sp, $sp, -16
 	sw $s1, ($sp)
 	sw $t0, 4($sp)
 	sw $v0, 8($sp)
