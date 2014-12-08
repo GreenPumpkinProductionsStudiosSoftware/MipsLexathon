@@ -245,56 +245,51 @@ printN:
 		addiu $sp, $sp, 16	
 		jr 	$ra		
 drawgrid: # prints 3x3 grid of the word at the address stored in $v0
-	addi $sp, $sp, -16
+	addi $sp, $sp, -8
 	sw $s1, ($sp)
-	sw $t0, 4($sp)
-	sw $v0, 8($sp)
-	sw $a0, 12($sp)
-	move $t0, $v0 #moves address of selected jumbled word to $t0
-	la $t0, puzzle
-	li $v0, 11
-	lb  $a0, 1($t0) #prints first character
+	sw $s0, 4($sp)
+
+	la $s0, puzzle
+	lb  $s1, 1($s0) #prints first character
 	sb  $s1, 0xFFFF000C
-	addi $a0, $0, 0x00000020 # prints a space
+	addi $s1, $0, 0x00000020 # prints a space
 	sb $s1, 0xFFFF000C
-	lb $a0, 2($t0) #prints second character
+	lb $s1, 2($s0) #prints second character
 	sb $s1, 0xFFFF000C
-	addi $a0, $0, 0x00000020 # prints a space
+	addi $s1, $0, 0x00000020 # prints a space
 	sb $s1, 0xFFFF000C
-	lb $a0, 3($t0) #prints third character
+	lb $s1, 3($s0) #prints third character
 	sb $s1, 0xFFFF000C
-	addi $a0, $0, 0x0000000A # prints new line
+	addi $s1, $0, 0x0000000A # prints new line
 	sb $s1, 0xFFFF000C
-	lb $a0, 4($t0) # prints fourth character
+	lb $s1, 4($s0) # prints fourth character
 	sb $s1, 0xFFFF000C
-	addi $a0, $0, 0x00000020 # prints a space
+	addi $s1, $0, 0x00000020 # prints a space
 	sb $s1, 0xFFFF000C
-	lb $a0, 0($t0) # prints middle character
+	lb $s1, 0($s0) # prints middle character
 	sb $s1, 0xFFFF000C
-	addi $a0, $0, 0x00000020 # prints a space
+	addi $s1, $0, 0x00000020 # prints a space
 	sb $s1, 0xFFFF000C
-	lb $a0, 5($t0) # prints sixth character
+	lb $s1, 5($s0) # prints sixth character
 	sb $s1, 0xFFFF000C
-	addi $a0, $0, 0x0000000A # prints new line
+	addi $s1, $0, 0x0000000A # prints new line
 	sb $s1, 0xFFFF000C
-	lb $a0, 6($t0) # prints seventh character
+	lb $s1, 6($s0) # prints seventh character
 	sb $s1, 0xFFFF000C
-	addi $a0, $0, 0x00000020 # prints a space
+	addi $s1, $0, 0x00000020 # prints a space
 	sb $s1, 0xFFFF000C
-	lb $a0, 7($t0) # prints eighth character
+	lb $s1, 7($s0) # prints eighth character
 	sb $s1, 0xFFFF000C
-	addi $a0, $0, 0x00000020 # prints a space
+	addi $s1, $0, 0x00000020 # prints a space
 	sb $s1, 0xFFFF000C
-	lb $a0, 8($t0) # prints ninth character
+	lb $s1, 8($s0) # prints ninth character
 	sb $s1, 0xFFFF000C
-	addi $a0, $0, 0x0000000A # prints new line
-	sb $s1, 0xFFFF000C
-	move $v0, $t0	#puts address of word back into $v0
+	addi $s1, $0, 0x0000000A # prints new line
+	sb $s1, 0xFFFF000C	
+	
 	lw $s1, ($sp)
-	lw $t0, 4($sp)
-	lw $v0, 8($sp)
-	lw $a0, 12($sp)
-	addiu $sp, $sp, 16	
+	lw $s0, 4($sp)
+	addiu $sp, $sp, 8	
 	jr $ra
 		
 ExitKernel:
@@ -309,24 +304,25 @@ ExitKernel:
 #END KERNEL DATA :3##############################################################################################################
 
 .data
+solutionsRemaining: .word 1
+timer: .word 99
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 'a','b','c','g','t','y',0,'u',0
-timer: .word 99
 wordsRemaining: .asciiz "000 words remaining\n"
-solutionsRemaining: .word 1
 timeString: .asciiz "000 seconds\n"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 lost: .asciiz "ow lose"
 winrar: .asciiz "wow win"
 loading: .asciiz "loading\n"
+play: .asciiz "play!\n"
 
 .text
 
 main:
-	li $v0,30
+	li $v0,4
 	la $a0, loading
 	syscall
 	addi $a0, $0, 0x10040000 #loads dictionary9 into 0x10040000, don't know if we actually want it there
@@ -357,6 +353,8 @@ main:
 	li $v0,4
 	la $a0, loading
 	syscall
+	li $v0, 12
+	sb $v0, 0x10040000
 	
 	startInput:
 	li $t0, 0xffff0000
