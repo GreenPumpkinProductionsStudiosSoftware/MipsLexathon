@@ -131,68 +131,25 @@ getTimeString:
 				li $a0, 1
 				sb $a0, timer($0)
 				jr $ra
-				
-				
-getWordString: #put into t4 the seconds, gets each number and makes a string
-				li $a0, 3
-				lb $t0, solutionsRemaining($a0)
-				beqz $t0, solutionsB
-				subi $t0, $t0, 1
-				sb $t0, solutionsRemaining($a0)
-				addi $t0, $t0, 48
-				sb $t0, wordsRemaining($a0)
-				jr $ra
-				solutionsB:
-				addi $t0, $t0, 9
-				sb $t0, solutionsRemaining($a0)
-				addi $t0, $t0, 48
-				sb $t0, wordsRemaining($a0)
-				li $a0, 2
-				lb $t0, solutionsRemaining($a0)
-				beqz $t0, solutionsC
-				subi $t0, $t0, 1
-				sb $t0, solutionsRemaining($a0)
-				addi $t0, $t0, 48
-				sb $t0, wordsRemaining($a0)
-				jr $ra
-				solutionsC:
-				addi $t0, $t0, 9
-				sb $t0, solutionsRemaining($a0)
-				addi $t0, $t0, 48
-				sb $t0, wordsRemaining($a0)
-				li $a0, 1
-				lb $t0, solutionsRemaining($a0)
-				beqz $t0, solutionsD
-				subi $t0, $t0, 1
-				sb $t0, solutionsRemaining($a0)
-				addi $t0, $t0, 48
-				sb $t0, wordsRemaining($a0)
-				jr $ra
-				solutionsD:
-				li $a0, 1
-				sb $a0, solutionsRemaining($0)
-				jr $ra
-	
 
 Display:
 	addi $sp, $sp, -8
 	sw $s1, ($sp)
 	sw $a0, 4($sp)
-	li $a0, 13
-	sb $a0, 0xFFFF000C
+	#li $a0, 13
+	#sb $a0, 0xFFFF000C
 	jal getTimeString
 	la $a0, timeString
 	jal printN
 	li $a0, 10
 	sw $a0, 0xffff000c
-	jal drawgrid
-	jal getWordString
-	la $a0, wordsRemaining
-	jal printN
 	li $a0, 10
 	sw $a0, 0xffff000c
-	la $a0, 0x10040000
-	#jal printFF
+	jal drawgrid
+	la $a0, wordsRemaining
+	jal printN
+	#li $a0, 10
+	#sw $a0, 0xffff000c
 	lw $s1, ($sp)
 	lw $a0, 4($sp)
 	addiu $sp, $sp, 8
@@ -310,14 +267,14 @@ ExitKernel:
 #END KERNEL DATA :3##############################################################################################################
 
 .data
-solutionsRemaining: .byte 0,0,0,0
+solutionsRemaining: .byte 0,0,0,0,0
 timer: .byte 0,5,0
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 'a','b','c','g','t','y',0,'u',0
-wordsRemaining: .asciiz "*000 words remaining\n"
-timeString: .asciiz "*00 tries remaining*\n"
+wordsRemaining: .asciiz "00000 words remaining\n"
+timeString: .asciiz "000 tries remaining*\n"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 lost: .asciiz "ow lose"
@@ -395,7 +352,7 @@ GamePlay:
 		lb $t0, timer($0)
 		bnez $t0, lostCondition
 		lb $t0, inputBuffer($0)
-		bne $t0, $0, parseInput
+		beq $t0, $0, parseInput
 		lw $t0, solutionsRemaining($0)
 		beq $t0, $0 wonCondition 
 		j GamePlayLoop 
@@ -411,7 +368,7 @@ GamePlay:
 		syscall
 		li $v0, 10
 		syscall
-		parseInput:
+	parseInput:
 			#clears screens
 			li $t0, 12
 			sw $t0, 0xffff000c 
@@ -443,30 +400,56 @@ GamePlay:
 			lw $t0, timer($t0)
 			addiu $t0, $t0, 1
 			sw $t0, timer($t0)
-			solutionsRemainSubtract:
+			getWordString: #put into t4 the seconds, gets each number and makes a string
+				li $a0, 4
+				lb $t0, solutionsRemaining($a0)
+				beqz $t0, solutionsA
+				subi $t0, $t0, 1
+				sb $t0, solutionsRemaining($a0)
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
+				jr $ra
+				solutionsA:
+				addi $t0, $t0, 9
+				sb $t0, solutionsRemaining($a0)
 				li $a0, 3
 				lb $t0, solutionsRemaining($a0)
-				beqz $t0, solutionsPartB
+				beqz $t0, solutionsB
 				subi $t0, $t0, 1
 				sb $t0, solutionsRemaining($a0)
-				j exitParse
-				solutionsPartB:
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
+				jr $ra
+				solutionsB:
+				addi $t0, $t0, 9
+				sb $t0, solutionsRemaining($a0)
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
 				li $a0, 2
 				lb $t0, solutionsRemaining($a0)
-				beqz $t0, solutionsPartC
+				beqz $t0, solutionsC
 				subi $t0, $t0, 1
 				sb $t0, solutionsRemaining($a0)
-				j exitParse
-				solutionsPartC:
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
+				jr $ra
+				solutionsC:
+				addi $t0, $t0, 9
+				sb $t0, solutionsRemaining($a0)
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
 				li $a0, 1
 				lb $t0, solutionsRemaining($a0)
-				beqz $t0, solutionsPartD
+				beqz $t0, solutionsD
 				subi $t0, $t0, 1
 				sb $t0, solutionsRemaining($a0)
-				j exitParse
-				solutionsPartD:
+				addi $t0, $t0, 48
+				sb $t0, wordsRemaining($a0)
+				jr $ra
+				solutionsD:
 				li $a0, 1
 				sb $a0, solutionsRemaining($0)
+				jr $ra
 			j exitParse
 		shuffleIt:
 			la $v0, puzzle
