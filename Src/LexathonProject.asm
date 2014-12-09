@@ -150,7 +150,7 @@ lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 0,'f',0,'a',0,'i',0,'l',0
 wordsRemaining: .asciiz "\n\nWords remaining: "
-timeString: .asciiz "\npresses remaining: "
+timeString: .asciiz "\nAttempts remaining: "
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 newLine: .asciiz "\n"
@@ -159,6 +159,7 @@ winrar: .asciiz "\nwow you won! :D\n\n"
 loading: .asciiz "loading\n"
 play: .asciiz "play!\n"
 inputQuestion: .asciiz "\nEnter a word:"
+openingWords: .asciiz "\n\t\t\t~~~~~WELCOME TO LEXATHON~~~~~\n\t\tHere are the rules:\n\t\t\t1. Your response must be between 4-9 letters (inclusive)\n\t\t\t2. You must use the center letter in your response\n\t\t\t3. Every correct answer awards you two attempts\n\t\t\t4. Every response deducts one from your allotted attempts\n\t\t\t5. The Matrix shuffles after every attempt\n\t\t\t6. Enter 'q' to quit"
 
 .text
 
@@ -208,6 +209,9 @@ main:
 	sb $v0, 0x10040000
 	
 	startInput:
+	li $v0, 4
+	la $a0, openingWords
+	syscall
 	li $t0, 0xffff0000
 	li $t1, 0x00000002
 	sw $t1 0($t0) #stores a 1 into the KDE's keyboard interrupt-enable bit (the second bit in 0xffff0000). before this instruction, pressing buttons on they keyboard won't do anything.
@@ -223,7 +227,7 @@ GamePlay:
 		lw $t0, timer($0)
 		beqz $t0, lostCondition
 		lb $t0, inputBuffer($0)
-		#bne $t0, $0, parseInput
+		bne $t0, $0, parseInput
 		lw $t0, solutionsRemaining($0)
 		beq $t0, $0, wonCondition 
 		tlti $s7, 2
@@ -257,7 +261,13 @@ GamePlay:
 			#checks to see if the user input the shffle string
 			la $a1, shuffleString
 			jal strcpr
-			bne $v0 $0, shuffleIt
+			jal shuffleIt
+			
+			continueParse:
+			li $a1, 1
+			lb $a1, inputBuffer($a1)
+			blt $a1, 5, exitParse
+			bge $a1, 11, exitParse
 			
 			#checks to see if the string that the user input is valid.
 			li $a1, 0x10110000 #starting address of solutions list
@@ -267,7 +277,7 @@ GamePlay:
 			#executes horfdorf
 			move $a0, $v0 #$v0, and now $a0, contains the word that needs to be transferred.
 			li $a1, 0x10040000 #location of found list that needs to be appended to.
-			jal horfdorf
+			#jal horfdorf
 			
 			#increment timer by 10 and decrement the number of solutions remaining by one.
 			lw $t0, timer($0)
@@ -278,9 +288,10 @@ GamePlay:
 			sw $t0, solutionsRemaining
 			j exitParse
 		shuffleIt:
-			la $v0, puzzle
+			li $v0, 1
+			la $v0, puzzle($v0)
 			jal shuffle
-			j exitParse
+			j continueParse
 		exitParse: #clears the buffer and allows for writing into the buffer again
 			li $t0, 1
 			li $t1, 10
@@ -456,7 +467,7 @@ shuffle: # $v0 is address of word to jumble
 	sw $ra, ($sp)
 
 	move $a0, $v0  # sets $a0 to address of word to jumble
-	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
+	addi $a1, $0, 0x00000008 # sets $a1 to 8, the length of the string
 	jal jumble	# jumbles word
 	
 	lw $ra, ($sp) # reloads return address
@@ -617,17 +628,20 @@ checkanswo:
 		bne $v0, $0, searchpositive #if that word is the same as the one the user typed in, then that solution is valid.
 		findnextword:#finds the next word by checking each byte until it finds a \n, and then increments a1 to the address after it.
 			addiu $a1, $a1, 1
-			lb $t0, ($a1)
+			li $s7, 0x10400000
+			beq $a1, $s7, searchpositive			
+			lb $t0, ($a1) #EXCEPTION HERE
 			beq $t0, $t2, loopeagain
 			beq $t0, $t1, loopeagain #if the character at $a1 is an \n or \r, then we're ready to read a word.
 			j findnextword	
 			loopeagain:	
-				addiu $a1, $a1, 2 #IMPORTANT: windows users change this to a two before running. I think.
+				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
 				lb $t0, ($a1)
 				beq $t0, $t2, searchnegative	#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n,
 								#which would normally set the program back to loope. this prevents this by checking for the terminating character, which we have assigned to be
 								#\f 	
 				j loope
+	
 	searchpositive:
 		move $v0, $a1
 		j answoexit
@@ -698,7 +712,7 @@ horfdorf:
 		sb $t0, 1($a1)
 		addiu $a1, $a1, 2 #the string is now formatted and ready to append to. :3
 		realcopy:
-			lb $t0 ($a0)
+			lb $t0 ($a0) #EXCEPTION HERE
 			beq $t0, $t2, endhorf # exits copy when the loop hits the newline in the original string.
 			sb $t0, ($a1)
 			sb $0, ($a0)
