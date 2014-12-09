@@ -50,15 +50,12 @@ la $a0, inputQuestion
 syscall
 li $v0, 8
 la $a0, stringBuffer
-li $a0, 10
-syscall
-jal inputBufferSetter
-li $v0, 1
-lw $a0, timer
-syscall
+li $a1, 10
+syscall #getting Input!
+jal inputBufferSetter #setting the input bytes!
+lw $a0, timer #counting down input!
 subi $a0, $a0, 1
 sw $a0, timer
-syscall
 j ExitKernel
 
 drawgui: #prints grid display
@@ -98,10 +95,6 @@ drawgui: #prints grid display
 	syscall
 	lb $a0, 8($t0) # prints ninth character
 	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
-	addi $a0, $0, 0x0000000A # prints new line
-	syscall
 	jr $ra
 
 inputBufferSetter:
@@ -119,10 +112,14 @@ inputBufferSetter:
 		sb $s5, inputBuffer($s4)
 		addi $s1, $s1, 1
 		addi $s4, $s4, 1
-		lw $s6, stringBuffer($s1)
+		lb $s6, stringBuffer($s1)
 		beq $s6, $0, notLoop
 		j loop
 	notLoop:
+	li $s5, 13
+	sb $s5, inputBuffer($s4)
+	li $s4, 1
+	sb $s1, inputBuffer($s4)
 	lw $s1, ($sp)
 	lw $s4, 4($sp)
 	lw $s5, 8($sp)
@@ -139,6 +136,7 @@ ExitKernel:
 	sw $s7, ($sp)
 	li $s7, 3
 	eret
+	
 #END KERNEL DATA :3##############################################################################################################
 
 .data
@@ -149,13 +147,13 @@ lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 puzzle: .byte 0,'f',0,'a',0,'i',0,'l',0
-wordsRemaining: .asciiz "words remaining: "
-timeString: .asciiz "presses remaining: "
+wordsRemaining: .asciiz "\n\nWords remaining: "
+timeString: .asciiz "\npresses remaining: "
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 newLine: .asciiz "\n"
-lost: .asciiz "\now lose\n"
-winrar: .asciiz "\nwow win\n"
+lost: .asciiz "\now you lost\n\n"
+winrar: .asciiz "\nwow you won! :D\n\n"
 loading: .asciiz "loading\n"
 play: .asciiz "play!\n"
 inputQuestion: .asciiz "\nEnter a word:"
@@ -271,7 +269,7 @@ GamePlay:
 			
 			#increment timer by 10 and decrement the number of solutions remaining by one.
 			lw $t0, timer($0)
-			addiu $t0, $t0, 10
+			addiu $t0, $t0, 2
 			sw $t0, timer($0)
 			lw $t0, solutionsRemaining
 			addiu $t0, $t0, -1
