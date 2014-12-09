@@ -116,10 +116,12 @@ inputBufferSetter:
 		beq $s6, $0, notLoop
 		j loop
 	notLoop:
-	li $s5, 13
+	li $s5, 10
 	sb $s5, inputBuffer($s4)
 	li $s4, 1
 	sb $s1, inputBuffer($s4)
+	li $s5, 1
+	sb $s5, inputBuffer($0)
 	lw $s1, ($sp)
 	lw $s4, 4($sp)
 	lw $s5, 8($sp)
@@ -223,7 +225,7 @@ GamePlay:
 		lb $t0, inputBuffer($0)
 		bne $t0, $0, parseInput
 		lw $t0, solutionsRemaining($0)
-		beq $t0, $0 wonCondition 
+		beq $t0, $0, wonCondition 
 		tlti $s7, 2
 		lw $s7, ($sp)	
 		addiu $sp, $sp, 4
@@ -615,7 +617,7 @@ checkanswo:
 		bne $v0, $0, searchpositive #if that word is the same as the one the user typed in, then that solution is valid.
 		findnextword:#finds the next word by checking each byte until it finds a \n, and then increments a1 to the address after it.
 			addiu $a1, $a1, 1
-			lb $t0, ($a1) 
+			lb $t0, ($a1)
 			beq $t0, $t2, loopeagain
 			beq $t0, $t1, loopeagain #if the character at $a1 is an \n or \r, then we're ready to read a word.
 			j findnextword	
