@@ -143,7 +143,7 @@ ExitKernel:
 
 .data
 solutionsRemaining: .word 1
-timer: .word 25
+timer: .word 10
 stringBuffer: .space 10
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
@@ -223,7 +223,7 @@ GamePlay:
 		lw $t0, timer($0)
 		beqz $t0, lostCondition
 		lb $t0, inputBuffer($0)
-		bne $t0, $0, parseInput
+		#bne $t0, $0, parseInput
 		lw $t0, solutionsRemaining($0)
 		beq $t0, $0, wonCondition 
 		tlti $s7, 2
