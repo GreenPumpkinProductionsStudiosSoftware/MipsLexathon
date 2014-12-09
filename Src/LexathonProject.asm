@@ -22,6 +22,8 @@ mfc0 $a0, $13
 srl $a0, $a0, 2
 andi $a0, $a0, 31
 #syscall
+li $a0, 1 
+beq $s7, $a0, Display
 
 keyboardInterrupt:
 	#updates the character timer
@@ -54,29 +56,40 @@ keyboardInterrupt:
 
 	addCharIntoBuffer:
 		#checkIndexBuffer Location
-		addi $s4, $0, 1
-		lb $k1, inputBuffer($s4)
-		addi, $k1, $k1, 2
+		addi $s1, $0, 1
+		lb $s1, inputBuffer($s1) #load the index
+		addi, $s4, $s1, 2 #add two to get the current location to place the letter
 		#write
-		sb $k0, inputBuffer($k1)		
+		sb $k0, inputBuffer($s4) #write into buffer
+		
+		addiu $s1, $s1, 1 #increment the number of characters stored by one
 		li $s4, 1
-		lb $k1, inputBuffer($s4)
-		li $s4, 8
-		beq 
-	
+		sb $s1, inputBuffer($s4) #store the incremented number in the buffer. on the next write, this+inputBuffer+2 will be where the program writes the character.
+					 #it is also the number of characters currently in the buffer
+		
+		li $k1, 9 
+		beq $k1, $s1 appendEntertoEnd #if there are nine letters in the display, then the user cannot put any more. 
+		
 		lw $s1, ($sp)
 		lw $s4, 4($sp)
 		lw $s5, 8($sp)
 		lw $s6, 12($sp)
 		addiu $sp, $sp, 16
 		j Display #returns to the program
-
+	appendEntertoEnd:
+		li $k1, 11
+		li $s4, 10
+		sb $s4, inputBuffer($k1)#stores a \n to the end of the inputBuffer.
+					#These three lines are only called when the buffer is full, so we know where to put it.
+		j SetReadByte #we don't need to do the rest of compareByEnter, that stuff is already done.		
 	compareByEnter:
 		addi $s4, $0, 1
 		lb $k1, inputBuffer($s4)
 		addi, $k1, $k1, 2
 		sb $k0, inputBuffer($k1)	
+		SetReadByte:
 		#set read byte to 1
+		
 		addi $k1, $0, 1
 		sb $k1, inputBuffer($0)
 		
@@ -91,8 +104,11 @@ keyboardInterrupt:
 		li $s0, 1	
 		lb $s0, inputBuffer($s0)
 		beq $s0, $0, ExitKernel #exits if index is 0, meaning that there are no characters to delete	
-		addi $s0, $s0, 2
+		addi $s0, $s0, 1
 		sb $0, inputBuffer($s0)
+		addi $s0, $s0, -2
+		li $s1, 1
+		sb $s0, inputBuffer($s1)
 		
 		lw $s1, ($sp)
 		lw $s4, 4($sp)
@@ -179,7 +195,7 @@ Display:
 	li $a0, 10
 	sw $a0, 0xffff000c
 	la $a0, 0x10040000
-	#jal printFF
+	jal printFF
 	lw $s1, ($sp)
 	lw $a0, 4($sp)
 	addiu $sp, $sp, 8
@@ -290,8 +306,6 @@ ExitKernel:
 	lw $a0 4($sp)
 	lw $a1 8($sp)	
 	addiu $sp, $sp, 12
-	addi $sp, $sp, -4 #THIS IS TO KEEP IT FROM TRAPPING REPEATEDLY
-	sw $s7, ($sp)
 	li $s7, 3
 	eret
 #END KERNEL DATA :3##############################################################################################################
@@ -301,8 +315,10 @@ solutionsRemaining: .word 1
 timer: .word 999
 lexdict9: .asciiz "lexdict9.txt"
 lexdict:  .asciiz "lexdict.txt"
+aa:.byte 'a'
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
-puzzle: .byte 'a','b','c','g','t','y',0,'u',0
+ab: .byte 'a'
+puzzle: .byte 0,0,0,0,0,0,0,0,0
 wordsRemaining: .asciiz "000 words remaining\n"
 timeString: .asciiz "000 presses remaining\n"
 exitString: .asciiz "q\n"
@@ -372,7 +388,8 @@ main:
 GamePlay:
 	addiu $sp, $sp, -4
 	sw $ra, ($sp)
-
+	li $s7, 1
+	tlti $s7, 2
 	GamePlayLoop:
 		lw $t0, timer($0)
 		beqz $t0, lostCondition
@@ -411,9 +428,9 @@ GamePlay:
 			bne $v0 $0, shuffleIt
 			
 			#checks to see if the string that the user input is valid.
-			li $a1, 0x10110000 #starting address of solutions list
+			li $a1, 0x1005a000 #starting address of solutions list
 			jal checkanswo
-			beq $v0, $0, GamePlayLoop
+			beq $v0, $0, exitParse
 			
 			#executes horfdorf
 			move $a0, $v0 #$v0, and now $a0, contains the word that needs to be transferred.
@@ -435,13 +452,19 @@ GamePlay:
 		exitParse: #clears the buffer and allows for writing into the buffer again
 			li $t0, 1
 			li $t1, 11
-			exitParseLoop:
+			ParseLoop:
 				sb $0, inputBuffer($t0)
 				addiu $t0, $t0, 1
-				beq, $t0, $t1, exitParseLoop
+				beq $t0, $t1, exitParseLoop
+				j ParseLoop
+			exitParseLoop:
 			sb $0, inputBuffer($0)
+			li $s7, 1
+			tlti $s7, 2
 			j GamePlayLoop
 	exitGamePlayLoop:
+		li $s7, 1
+		tlti $s7, 2	
 		lw $ra ($sp)
 		addiu $sp, $sp, 4
 		jr $ra
@@ -488,7 +511,7 @@ generatearray:
 	syscall	
 	
 	#jumble the word at the appropriate address.	
-	li $t1, 11 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
+	li $t1, 10 #IMPORTANT: windows users (AKA everyone else) need to change this to eleven before running.
 	multu $a0, $t1
 	mflo $a0
 	addu $a0, $a0, $t0
@@ -675,7 +698,7 @@ createsolutionsstring:
 			move $t3, $0 #resets counter
 			matchfoundloop:
 				lb $t2, 0x10058d20($t3) # loads next byte
-				sb $t2, 0x10110000($t1) # adds byte to solutions list
+				sb $t2, 0x1005a000($t1) # adds byte to solutions list
 				addi $t1, $t1, 1 # $t1++
 				addi $t3, $t3, 1 #$t0++
 				beq $t2, 0x0000000a, matchend # branches if byte is new line
@@ -689,7 +712,7 @@ createsolutionsstring:
 				j createloop
 	endsolutions:
 		addi $t2, $0, 0x000000c # puts a null terminator at the end of the solutions list
-		sb $t2, 0x10110000($t1)
+		sb $t2, 0x1005a000($t1)
 		lw $ra, ($sp) # reloads return address
 		addiu $sp, $sp, 4
 		move $v0, $a0 # restores address of jumbled word to $v0
@@ -773,9 +796,10 @@ checkanswo:
 			beq $t0, $t1, loopeagain #if the character at $a1 is an \n or \r, then we're ready to read a word.
 			j findnextword	
 			loopeagain:	
-				addiu $a1, $a1, 2 #IMPORTANT: windows users change this to a two before running. I think.
+				addiu $a1, $a1, 1 #IMPORTANT: windows users change this to a two before running. I think.
 				lb $t0, ($a1)
-				beq $t0, $t2, searchnegative	#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n,
+				li $v0, 12
+				beq $t0, $v0, searchnegative	#this is important becuase it ensures we don't try and read past the end of the word list. The last word in the lest should end with a \n,
 								#which would normally set the program back to loope. this prevents this by checking for the terminating character, which we have assigned to be
 								#\f 	
 				j loope
@@ -888,11 +912,9 @@ horfdorf:
 		addiu $a1, $a1, 1
 		j findendofsolutions
 	copy: #the address to the end of the solutions list is now in #a1
-		li $t0, 44 #add a comma	
-		sb $t0, ($a1)
-		li $t0, 32 #add a space 
-		sb $t0, 1($a1)
-		addiu $a1, $a1, 2 #the string is now formatted and ready to append to. :3
+		#li $t0, 44 #add a comma	
+		#sb $t0, ($a1)
+		#addiu $a1, $a1, 2 #the string is now formatted and ready to append to. :3
 		realcopy:
 			lb $t0 ($a0)
 			beq $t0, $t2, endhorf # exits copy when the loop hits the newline in the original string.
@@ -902,6 +924,8 @@ horfdorf:
 			addiu $a1, $a1, 1
 			j realcopy
 	endhorf:
+		li $t0, 32 #add a space 
+		sb $t0, ($a1)
 		sb $t1, 1($a1) #terminate the solutions list with a \f
 		#li $t0, 13 #carriage return
 		#sb $t0, ($a0) #change the \n in the original string to a carriage return to make victory condition easier to determine
