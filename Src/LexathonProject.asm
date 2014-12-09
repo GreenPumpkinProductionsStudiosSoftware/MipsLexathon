@@ -447,6 +447,7 @@ GamePlay:
 			j exitParse
 		shuffleIt:
 			la $v0, puzzle
+			addi $v0, $v0, 1
 			jal shuffle
 			j exitParse
 		exitParse: #clears the buffer and allows for writing into the buffer again
@@ -630,7 +631,7 @@ shuffle: # $v0 is address of word to jumble
 	sw $ra, ($sp)
 
 	move $a0, $v0  # sets $a0 to address of word to jumble
-	addi $a1, $0, 0x00000009 # sets $a1 to 9, the length of the string
+	addi $a1, $0, 0x00000008 # sets $a1 to 9, the length of the string
 	jal jumble	# jumbles word
 	
 	lw $ra, ($sp) # reloads return address
