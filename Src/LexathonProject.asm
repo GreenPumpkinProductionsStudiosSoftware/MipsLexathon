@@ -204,6 +204,7 @@ printInt:
 	sw $t0, 4($sp)
 	sw $t1, 8($sp)	
 
+	sw $0, sRBuffer($0)	
 	li $t0, 10	
 	la $t1 sRBuffer
 	addiu $t1, $t1, 4	
