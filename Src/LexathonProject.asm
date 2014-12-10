@@ -191,6 +191,8 @@ Display:
 	jal printN
 	li $a0, 10
 	sw $a0, 0xffff000c
+	la $a0, instructionString
+	jal printFF 
 	la $a0, 0x10040000
 	jal printFF
 	lw $s1, ($sp)
@@ -347,6 +349,7 @@ sRBuffer: .word 0
 aSpace: .word 0
 wordsRemaining: .asciiz " words remaining\n"
 timeString: .asciiz "000 presses remaining\n"
+instructionString: .asciiz "Press enter with no input to shuffle the letters. Type in 'q' and press enter to quit.\n\f"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
 lost: .asciiz "ow lose"
@@ -951,9 +954,11 @@ horfdorf:
 			addiu $a1, $a1, 1
 			j realcopy
 	endhorf:
-		li $t0, 32 #add a space 
+		li $t0, 44 #add a comma
 		sb $t0, ($a1)
-		sb $t1, 1($a1) #terminate the solutions list with a \f
+		li $t0, 32 #add a space
+		sb $t0, 1($a1)
+		sb $t1, 2($a1) #terminate the solutions list with a \f
 		#li $t0, 13 #carriage return
 		#sb $t0, ($a0) #change the \n in the original string to a carriage return to make victory condition easier to determine
 		lw $a1, 16($sp)
