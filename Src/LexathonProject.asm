@@ -183,14 +183,11 @@ Display:
 	sw $a0, 4($sp)
 	li $a0, 13
 	sb $a0, 0xFFFF000C
-	jal getTimeString
-	la $a0, timeString
-	jal printN
-	li $a0, 10
-	sw $a0, 0xffff000c
 	jal drawgrid
-	jal getWordString
-	la $a0, wordsRemaining
+	#jal getWordString
+	lw $a0, solutionsRemaining
+	jal printInt
+	la $a0, sRBuffer 
 	jal printN
 	li $a0, 10
 	sw $a0, 0xffff000c
@@ -200,7 +197,33 @@ Display:
 	lw $a0, 4($sp)
 	addiu $sp, $sp, 8
 	j ExitKernel
+#prints an integer value. arguments: a0= integer value to print.
+printInt:
+	addiu $sp, $sp, -12
+	sw $a0, ($sp)
+	sw $t0, 4($sp)
+	sw $t1, 8($sp)	
 
+	li $t0, 10	
+	la $t1 sRBuffer
+	addiu $t1, $t1, 4	
+	printIntLoop:
+		div $a0, $t0
+		mfhi $a0
+		addiu $a0, $a0, 48
+		sb $a0, 0($t1)
+		mflo $a0
+		beq $a0, $0 printIntExit
+		addiu $t1, $t1, -1 	
+		j printIntLoop
+	printIntExit:
+		
+		lw $a0, ($sp)
+		lw $t0, 4($sp)
+		lw $t1, 8($sp)
+		addiu $sp, $sp, 12
+		jr $ra	
+					
 #print a \f terminated string.
 #arguments: a0= starting address of string to print.
 printFF:
@@ -319,7 +342,9 @@ aa:.byte 'a'
 inputBuffer: .byte 0,0,0,0,0,0,0,0,0,0,0,0
 ab: .byte 'a'
 puzzle: .byte 0,0,0,0,0,0,0,0,0
-wordsRemaining: .asciiz "000 words remaining\n"
+sRBuffer: .word 0
+aSpace: .word 0
+wordsRemaining: .asciiz " words remaining\n"
 timeString: .asciiz "000 presses remaining\n"
 exitString: .asciiz "q\n"
 shuffleString: .asciiz "\n"
